@@ -15,8 +15,8 @@ sub lookup {
   if (!$db{$ip} or
      (time-(split ":", $db{$ip})[0] > 86400*7)) {
     #warn "Looking up $ip";
-    my $name = ip2name($ip);
-    warn "name: $name\n";
+    my $name = lc ip2name($ip);
+    #warn "name: $name\n";
     $name =~ s/.*\.([^.]+)$/$1/;
     $name = "us"  # blatant assumtions at play
       if $name =~ m/^(com|edu|mil|gov)$/;
