@@ -22,6 +22,8 @@ die "--interface [ip] required\n" unless $opts{interface};
 die "--user [user|uid] required\n" unless $opts{user};
 
 my $config;
+my $stats;
+$stats->{started} = time;
 
 sub log {
   warn @_;
@@ -43,6 +45,11 @@ sub reply_handler {
 
   my ($qname, $qclass, $qtype, $peerhost) = @_;
   $qname = lc $qname;
+
+  warn "\nlookup for $qname\n";
+
+  $stats->{qname}->{$qname}++;
+  $stats->{queries}++;
 
   my $base = $config->{base}; 
 
@@ -72,8 +79,6 @@ sub reply_handler {
   if ($qname =~ m/(.*)\Q$base\E$/ and $config->{groups}->{$1}) {
     my $qgroup = $1;
 
-    warn "looking for $qname or something; group is $qgroup ...";
-
     my (@groups) = pick_groups($peerhost, $qgroup);
 
     warn "groups: ", join " / ", @groups;  
@@ -100,9 +105,20 @@ sub reply_handler {
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
 
   }
-  elsif($config->{ns}->{$qname}) {
+  elsif ($config->{ns}->{$qname}) {
+    push @ans, grep { $_->address eq $config->{ns}->{$qname} } @{ (get_ns_records)[1] };
+    @add = grep { $_->address ne  $config->{ns}->{$qname} } @add;
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
+  }
 
+  elsif ($qname =~ m/status\.\Q$base\E$/) {
+      my $uptime = time - $stats->{started} || 1;
+      # TODO: convert to 2w3d6h format ...
+      my $status = sprintf "%s, upt: %i, q: %i, %.2f/qps",
+        $opts{interface}, $uptime, $stats->{queries}, $stats->{queries}/$uptime;
+      warn Data::Dumper->Dump([\$stats], [qw(stats)]);
+      push @ans, Net::DNS::RR->new("$qname. 0 IN TXT '$status'") if $qtype eq "TXT" or $qtype eq "ANY";
+      return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
   else {
     return ("NXDOMAIN", [], [], [], { aa => 1 });
@@ -159,11 +175,7 @@ sub pick_groups {
 sub pick_hosts {
   my ($group) = shift;
 
-  warn "pick hosts";
-
   return unless $config->{groups}->{$group}; 
-
-  warn "still picking hosts"; 
 
   my @answer;
   my $max = 2;
