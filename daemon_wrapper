@@ -1,0 +1,43 @@
+#!/bin/sh
+
+#  Keep a daemon running and running and running ...
+#
+#  Normally starts a process in the background
+#  unless "bg" is given as the second argument.
+
+trap '' 1 15 # ignore SIG HUP & TERM
+
+PATH=/usr/xpg4/bin:$PATH # Solaris compatibility
+
+#if test `id -u` = 0
+#then 
+#  su - value -c "$0 $1" &
+#  exit
+#fi
+
+if test "$1" != "-bg"
+then
+  echo "$0 $$: Starting $* in background"
+  $0 -bg "$@" &
+  exit
+fi
+
+shift			# remove the -bg
+PROGRAM=$1; shift	# get and remove program name
+
+while true
+do
+	echo "$0 $$: Starting $PROGRAM $@"
+	$PROGRAM "$@" < /dev/null
+	status=$?
+	if test $status -eq 10 ; then
+		msg="$PROGRAM $@ exited with status 10 - not restarted"
+		logger -p 'local0.warning' "$msg"
+		echo "$msg"
+		exit 0
+	fi
+	msg="$PROGRAM $@ exited with status $status - will restart (parent=$$)"
+	logger -p 'local0.warning' "$msg"
+	echo "$msg"
+	sleep 2
+done   

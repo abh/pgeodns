@@ -1,0 +1,63 @@
+
+dinamed
+-------
+
+This name server is more or less just a hacked up version of lbnamed
+which can be found at http://www.stanford.edu/~riepel/lbnamed/
+
+
+Get started
+-----------
+
+From the dinamed directory run
+
+ ./dinamed -i [ip|hostname] -l log
+
+or (better)
+
+ ./daemon_wrapper ./dinamed -i [ip|hostname] -l log -n
+
+which will keep the thing running if it should get the silly idea to
+die.
+
+The -n parameter makes dinamed not go into the background, which
+daemon_wrapper requires.
+
+You can edit the dinamed.rc program to do what you want and just run that.
+
+The interface you specify with the ip address or hostname can't have
+another nameserver running as it would already be taking up port
+53. You also (obviously) need to run this thing as root so it can bind
+to port 53.
+
+Cool stuff
+----------
+
+Try
+
+  dig -t txt mgmt.ddns.develooper.com @your-server
+
+
+Known problems
+--------------
+
+It leaves a core file when you ctrl-c it in debug mode (-d). I haven't
+had time to look into that.
+
+It's spewing out an awful amount of debug junk even when
+not in debug mode. Oh well.
+
+It doesn't know how to shutdown in a way daemon_wrapper understands,
+so making it stop is a pain. 
+
+Depending on your platform, something like
+
+  ps axw | grep dinamed | grep -v grep | awk '{print $1}' | xargs kill -9
+
+should do it. =)
+
+
+Who did that?
+-------------
+
+Ask Bjoern Hansen - ask@develooper.com - did this.

@@ -1,0 +1,280 @@
+#!/usr/bin/perl
+#######################################################################
+#
+# dinamed - load balancing name server in perl5
+#
+# $Id: dinamed,v 1.1 2001/04/22 12:52:35 ask Exp $
+#
+# $Log: dinamed,v $
+# Revision 1.1  2001/04/22 12:52:35  ask
+# commit working directory to sourceforge
+#
+#
+#----------------------------------------------------------------------
+# Copyright (c) 1995 Board of Trustees, Leland Stanford Jr. University
+#######################################################################
+
+use Socket;
+use Sys::Hostname;
+
+use DNS;
+use LBDB;
+
+require 'newgetopt.pl';
+
+&NGetOpt("d","l:s","n", "i:s");
+
+$log_file = $opt_l;
+$debug = $opt_d;
+
+&daemon unless ($opt_n);
+&open_log($log_file) if ($log_file);
+
+require "$0.conf";
+
+&init_dns_socket(*DNS_UDP,*DNS_TCP);
+
+open PID, ">$0.pid" or die "could not open pid file: $!";
+print PID "$$";
+close PID or die "Could not close pid file: $!";
+
+&write_log("ready to answer requests");
+
+&answer_requests;
+
+&clean_exit;
+
+sub answer_requests {
+
+$done = 0;
+
+  until ($done) {
+      $rin=''; 
+      vec($rin,fileno(DNS_UDP),1) = 1;
+      vec($rin,fileno(DNS_TCP),1) = 1;
+      &do_maint if ($need_maint);
+      $nfound = select($rout=$rin,undef,undef,undef);
+      if ($nfound > 0) {
+  	  &handle_udp_dns_request(*DNS_UDP) if (vec($rout,fileno(DNS_UDP),1));
+	  &handle_tcp_dns_request(*DNS_TCP) if (vec($rout,fileno(DNS_TCP),1));
+      }  
+  }
+}
+
+sub handle_udp_dns_request {
+    local(*DNS_UDP) = @_;
+    local($buff,$reply);
+    $from = recv(DNS_UDP,$buff,8192,0) || die "Can't receive: $!";
+    my ($port, $their_iaddr) = sockaddr_in($from);
+    my $their_ip = inet_ntoa($their_iaddr);
+    #my $their_host = gethostbyaddr($their_iaddr, AF_INET);
+    $reply = &do_dns_request(*buff,*from, $their_ip);
+    if ($reply) {
+	send(DNS_UDP,$reply,0,$from) || die "Can't send: $!";
+    }
+}
+
+sub handle_tcp_dns_request {
+    local(*DNS_TCP) = @_;
+    local($from,$len,$buff,$reply,*S);
+
+    &write_log("in handle_tcp_dns_request") if $debug;
+    if (!($from=accept(S,DNS_TCP))) {
+	&write_log("handle_tcp_dns_request: Can't accept: $!");
+	return;
+    }
+    if (fork) { 
+	close(S);
+    } else {
+	close(DNS_TCP);
+	while(sysread(S,$buff,2)) {
+	    $len = unpack("n",$buff);
+	    sysread(S,$buff,$len) || exit(1);
+	    $reply = &do_dns_request(*buff,*from);
+	    if ($reply) {
+		send(S,pack("n",length($reply)),0) || die "Can't send: $!";
+		send(S,$reply,0) || die "Can't send: $!";
+	    }
+	}
+	close(DNS_TCP);
+	exit(0);
+    }
+}
+
+sub do_dns_request {
+    local(*buff,*from,$host) = @_;
+    local($buff_len,$answer,$rcode,$response);
+    local($id,$flags,$qdcount,$ancount,$nscount,$arcount);
+
+    $buff_len   = length($buff);
+
+    return '' if ($buff_len <= HEADERLEN); # short packet, ignore it.
+
+    $header     = substr($buff,0,HEADERLEN);
+    $question   = substr($buff,HEADERLEN);
+    $ptr        = HEADERLEN;
+
+    ($id,$flags,$qdcount,$ancount,$nscount,$arcount) = unpack("n6 C*",$header);
+
+    $qr     = ($flags & QR_MASK) >> QR_SHIFT;
+    $opcode = ($flags & OP_MASK) >> OP_SHIFT;
+    $tc     = ($flags & TC_MASK) >> TC_SHIFT;
+    $rd     = ($flags & RD_MASK) >> RD_SHIFT;
+
+    return '' if ($qr);   # should not be set on a query, ignore packet
+
+    $question_len = length($question);
+
+    if ( dns_expand(*buff,$ptr,*qname,*comp_len)==0) {
+        $flags |=  QR_MASK | AA_MASK | FORMERR;
+        $response = pack("n n n n n n",$id,$flags,1,0,0,0);
+        $response .= $question;
+        return $response;
+    }
+
+    $ptr += $comp_len;
+    ($qtype,$qclass) = unpack("n n",substr($buff,$ptr,4));  
+    $ptr +=4;
+
+    if ( ($opcode != QUERY) ) {
+        $flags |=  QR_MASK | AA_MASK | NOTIMP;
+        $response = pack("n n n n n n",$id,$flags,1,0,0,0);
+        $response .= $question;
+        return $response;
+    }
+    if ($ptr != $buff_len) { # we are not at end of packet (we should be :-) )
+	$flags |=  QR_MASK | AA_MASK | FORMERR;
+        $response = pack("n n n n n n",$id,$flags,1,0,0,0);
+        $response .= $question;
+        return $response;
+    }
+
+    $qname = "\L$qname";
+
+    my $dnsmsg = {
+#	'id' => $id,
+#	'qtype' => $qtype,
+#	'qclass' => $qclass,
+#	'qname' => $qname,
+	'rcode' => NOERROR,
+	'qdcount' => $qdcount,
+	'ancount' => 0,
+	'nscount' => 0,
+	'arcount' => 0,
+	'answer'  => '',
+	'auth'    => '',
+	'add'     => ''
+    };
+
+    if (LBDB::check_static($qname,$qtype,$qclass,$dnsmsg,$host)) {
+       # return answer
+    } elsif (LBDB::check_dynamic($qname,$qtype,$qclass,$dnsmsg,$host)) {
+       # return answer
+    } else {
+       $dnsmsg->{'rcode'} = NXDOMAIN;
+    }
+
+    $flags |=  QR_MASK | AA_MASK | $dnsmsg->{'rcode'};
+    $response = pack("n n n n n n",$id,$flags,$qdcount,
+			$dnsmsg->{'ancount'},
+			$dnsmsg->{'nscount'},
+			$dnsmsg->{'arcount'})
+	. $question
+        . $dnsmsg->{'answer'} 
+        . $dnsmsg->{'auth'} 
+        . $dnsmsg->{'add'};
+
+    return $response;
+}
+   
+sub daemon {
+    local(*TTY,*NULL);
+
+    exit(0) if (fork);
+    if (open(NULL,"/dev/null")) {
+	open(STDIN,">&NULL") || close(STDIN);
+	open(STDOUT,">&NULL") || close(STDOUT);
+	open(STDERR,">&NULL") || close(STDERR);
+    } else {
+	close(STDIN);
+	close(STDOUT);
+	close(STDERR);
+    }
+    eval 'require "sys/ioctl.ph";';
+    return if !defined(&TIOCNOTTY);
+    open(TTY,"+>/dev/tty") || return;
+    ioctl(TTY,&TIOCNOTTY,0);
+    close(TTY);
+}
+
+sub init_dns_socket {
+    local(*UDP_SOCK,*TCP_SOCK) = @_;
+
+    #$hostname=hostname;
+    #my $hostname = "ddns1.develooper.com";
+    my $hostname = $opt_i;
+    local($name, $aliases, $type, $len, $clientaddr) = 
+                                              gethostbyname($hostname);
+
+    die "unable to get my ip address!" if ($name eq '');
+
+    print "will bind to $name ...\n";
+
+    $client = pack($sockaddr_t,PF_INET, NAMESERVER_PORT,$clientaddr);
+    socket(UDP_SOCK,AF_INET,SOCK_DGRAM,0) || die "socket: $!";
+    bind(UDP_SOCK,$client) || die "bind: $!";
+
+    $client = pack($sockaddr_t,PF_INET, NAMESERVER_PORT,$clientaddr);
+    socket(TCP_SOCK,AF_INET,SOCK_STREAM,0) || die "socket: $!";
+    setsockopt(TCP_SOCK, SOL_SOCKET, SO_REUSEADDR, 1);
+    bind(TCP_SOCK,$client) || die "bind: $!";
+    listen(TCP_SOCK,5) || die"listen: $!";
+}
+
+sub inet_ntoa {
+    local($ip) = @_;
+    local($a,$b,$c,$d) = unpack('C4',$ip);
+    return "$a.$b.$c.$d";
+}
+
+sub inet_ntoa_sock {
+    local($addr) = @_;
+    local($pf,$port,$ip) = unpack($sockaddr_t,$addr);
+    local($a,$b,$c,$d) = unpack('C4',$ip);
+    return "$a.$b.$c.$d";
+}
+
+sub open_log {
+    local($file)=@_;
+    &close_log if ($log_logging);
+    open(LOGFILE,">>$file") || die "can't open $file: $!";
+    $log_logging = 1;
+    select(LOGFILE); $| =1;
+}
+
+sub close_log {
+    close(LOGFILE) if ($log_logging);
+    $log_logging=0;
+}
+
+sub write_log {
+    local($message)=@_;
+    local($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)
+        = localtime(time);
+    local($date)=sprintf("%02d/%02d %02d:%02d",$mon+1,$mday,$hour,$min);
+    print LOGFILE "$date $$ dinamed $message\n" if ($log_logging);
+}
+
+sub usage {
+  print<<EOF;
+
+Usage:  $0 -f configfile
+  -d               debug
+  -l logfile       logfile
+  -n                don't fork
+
+EOF
+
+ exit(1);
+}
+

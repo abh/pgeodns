@@ -1,0 +1,7 @@
+#!/bin/sh
+
+#cd /usr/local/dinamed
+
+./daemon_wrapper ./dinamed -l log -i ddns1.develooper.com -n 
+
+

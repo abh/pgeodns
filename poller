@@ -1,0 +1,74 @@
+#!/usr/bin/perl -w 
+use strict;
+use Regions qw(%country_code %country_continent);
+use LWP::Simple qw(mirror RC_OK RC_NOT_MODIFIED);
+
+my $opt_file = "cpan.config.lb";
+
+sub logit {
+  print STDERR scalar localtime, " $$ [poller] ", join(" ", @_), "\n";
+}
+
+logit "starting";
+
+$| = 1;
+
+#do_conversion();
+#exit;
+
+while (1) {
+  if (get_rrlist()) {
+    do_conversion();
+  }
+  logit "waiting";
+  sleep 1200;
+}
+
+sub get_rrlist {
+  my $mirror_rv = mirror("http://mirror.cpan.org/rrlist.txt", "CPAN.data");
+  if ($mirror_rv == RC_NOT_MODIFIED) {
+    return 0;
+  }
+  unless ($mirror_rv == RC_OK) {
+    logit "poller could not get rrlist: $mirror_rv\n";
+    return 0
+  }
+  return 1;
+}
+
+sub do_conversion {
+  open DATA, "./CPAN.data" or die "Could not open CPAN.data: $!";
+  my $tmp_file = "$opt_file.$$.tmp";
+  open CONF, ">$tmp_file" or die "Could not open $tmp_file: $!";
+  while (<DATA>) {
+    next unless m/\S/;
+    chomp;
+    my ($url, $host, $bandwidth, $contact, $country) = map { $_ =~ s/\s*$//; $_ } split /\t/, $_;
+    next unless $url =~ m!ftp://[^/]+/pub/CPAN/!;
+    #print "$host / $bandwidth / $country\n";
+    my $ip = join ".", unpack('C4',((gethostbyname($host))[4])[0]); 
+
+    my $country_code = $country_code{$country};
+    my $continent    = $country_continent{$country};
+    $continent =~ s/ /-/g;
+
+    printf CONF "%5i %-30s %-15s ftp.cpan %-11s %-20s\n", 1000, "$host.", $ip,
+       ($country_code ? "ftp.$country_code.cpan" : ""),
+       ($continent    ? "ftp.$continent.cpan"    : ""),
+  }
+  close DATA or die "Could not close CPAN.data: $!";
+  close CONF or die "Could not close tmp conf file: $!";
+  rename $tmp_file, $opt_file or die "Could not rename $tmp_file to $opt_file: $!";
+
+  kill 1, `cat dinamed.pid`;
+
+#  print FILE "$weight $host $ip $aliases{$host}\n";
+
+}
+
+__END__
+# "$weight $host $ip $aliases{$host}\n";
+
+1200 miette.develooper.com. 64.81.84.162    ftp.cpan  m
+1100 lux.develooper.com.    216.246.96.121  ftp.cpan  l
+1400 tmtowtdi.perl.org.     209.85.3.25     ftp.cpan  t
