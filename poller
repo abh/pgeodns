@@ -23,6 +23,8 @@ for my $mod (@poller_modules) {
   warn $@ if $@;
 }
 
+my $time_started = time;
+
 while (1) {
   my @to_convert;
   for my $mod (values %modules) {
@@ -41,7 +43,10 @@ while (1) {
     close CONF or die "Could not close $tmp_file: $!";
     rename $tmp_file, $opt_file or die "Could not rename $tmp_file to $opt_file: $!";
   }
- 
+
+  if (time-$time_started > 7200) {
+    exit;
+  }
 
   logit "waiting";
   sleep 1200;
