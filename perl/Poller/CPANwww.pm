@@ -24,6 +24,7 @@ sub convert {
   my @lb_data = ();
   while (<DATA>) {
     next unless m/\S/;
+    next if m/\s*#/;
     chomp;
     my ($url, $host, $bandwidth, $contact, $country) = map { $_ =~ s/\s*$//; $_ } split /\t/, $_;
     #next unless $url =~ m!ftp://[^/]+/pub/CPAN/!;
