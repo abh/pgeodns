@@ -5,6 +5,22 @@ dinamed
 This name server is more or less just a hacked up version of lbnamed
 which can be found at http://www.stanford.edu/~riepel/lbnamed/
 
+dinamed is optimized for distributing load to remote hosts for large
+"ftp clusters" kinda things. It doesn't (yet) support taking the
+actual realtime load on the remote boxes into account.
+
+If you are load balancing a local environment for interactive sessions
+you'll probably want to look at lbnamed instead. (It's included in the
+lbnamed subdirectory of the dinamed distribution).
+
+
+
+Where to get the latest version
+-------------------------------
+
+http://sourceforge.net/projects/dinamed/ is your best bet.
+
+
 
 Get started
 -----------
@@ -60,4 +76,6 @@ should do it. =)
 Who did that?
 -------------
 
-Ask Bjoern Hansen - ask@develooper.com - did this.
+schemers@eng.sun.com and riepel@networking.stanford.edu wrote the original
+lbnamed. Ask Bjoern Hansen, ask@develooper.com, made dinamed heavily based
+on their work.
