@@ -1,73 +1,251 @@
-#!/usr/local/bin/perl
+#!/usr/bin/perl -w
 
 use Net::DNS;
 use Net::DNS::Nameserver;
+use Geo::IP;
 use strict;
 use warnings;
+use POSIX qw(setuid);
+use Getopt::Long;
 
-use Geo::Mirror;
+use lib 'lib';
+use Countries qw(continent);
 
-my $gm = Geo::Mirror->new(mirror_file => '/home/rspier/m.txt');
+my %opts = (verbose => 0);
+GetOptions (\%opts,
+	    'interface=s',
+	    'verbose!',
+	   ) or die "invalid options";
 
-# Geo::Mirror data looks like this...
-# 10.0.0.1 us
-# 10.0.2.1 ca
-# 10.0.2.2 ca
-# 10.0.3.1 fr
-# 10.0.4.1 jp
-# can we base it off this data instead?
-# http://miette.develooper.com/~ask/dinamed-conf/dinamed.config.lb
+die "--interface [ip] required\n" unless $opts{interface};
 
-# We also need to figure out some sort of dynamic lookup, because
-# Geo::Mirror loads the file once.  (Of course, we dont' want to load
-# the file _every_ time.)  Maybe store it in a bdb and reload it
-# periodically?  Or a storable dump and check for updates every 5
-# minutes?
+my $config;
+
+sub log {
+  warn @_;
+}
+
+sub get_ns_records {
+  my (@ans, @add);
+  my $base = $config->{base};
+  for my $ns (keys %{ $config->{ns} }) {
+    push @ans, Net::DNS::RR->new("$base 86400 IN NS $ns.");
+    push @add, Net::DNS::RR->new("$ns. 86400 IN A $config->{ns}->{$ns}")
+      if $config->{ns}->{$ns};
+  }
+  return (\@ans, \@add);
+}
 
 sub reply_handler {
+  check_config();
+
   my ($qname, $qclass, $qtype, $peerhost) = @_;
-  my ($rcode, @ans, @auth, @add);
 
-  $rcode = "NXDOMAIN"; # default error
-  my $m;
 
-  if ($qtype eq "A") {
-    if ($qname eq "ftp.cpan.org"
-	and $m = $gm->find_mirror_by_addr($peerhost) ) {
-      # find the closest mirror from around the world
-      my ($ttl, $rdata) = (3600, $m);
-      push @ans, Net::DNS::RR->new("$qname $ttl $qclass $qtype $rdata");
-      $rcode = "NOERROR";
+  my $base = $config->{base}; 
+
+  my (@ans, @auth, @add);
+
+  push @auth, @{ (get_ns_records)[0] };
+  push @add, @{ (get_ns_records)[1] };
+
+  if ($qname eq $base) {
+    # return NS
+
+    if ($qtype eq "SOA" or $qtype eq "ANY") {
+      my $serial = $config->{serial};
+      push @ans, Net::DNS::RR->new
+	("$base. 3600 $qclass $qtype $config->{primary_ns};
+          dns.perl.org. $serial 5400 5400 2419200 300");
     }
-    elsif ($qname =~ /^ftp\.([a-z][a-z])\.cpan.org$/
-	   and $m = $gm->find_mirror_by_country($1)) {
-      # country code based stuff
-      my ($ttl, $rdata) = (3600, $m);
-      push @ans, Net::DNS::RR->new("$qname $ttl $qclass $qtype $rdata");
-      $rcode = "NOERROR";
-    } else {
-      $rcode = "NXDOMAIN";
+    if ($qtype eq "NS" or $qtype eq "ANY") {
+      # don't need the authority section for this request ...
+      @auth = @add = ();
+      push @ans, @{ (get_ns_records)[0] };
+      push @add, @{ (get_ns_records)[1] };
     }
-  } else {
-    $rcode = "NXDOMAIN";
+    return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
 
-  # mark the answer as authoritive (by setting the 'aa' flag
-  return ($rcode, \@ans, \@auth, \@add, { aa => 1 });
+  if ($qname =~ m/(.*)\.ddns\.develooper\.com$/ and $config->{groups}->{$1}) {
+    my $qgroup = $1;
+
+    warn "looking for $qname or something; group is $qgroup ...";
+
+    my (@groups) = pick_groups($peerhost, $qgroup);
+
+    warn "groups: ", join " / ", @groups;  
+
+    my @hosts;
+    for my $group (@groups) { 
+      push @hosts, pick_hosts($group);
+      last if @hosts >= 2;
+    }
+    
+    if ($qtype eq "A" or $qtype eq "ANY") {
+      for my $host (@hosts) {
+	push @ans, Net::DNS::RR->new("$qname. 60 IN A $host->{ip}");
+      }
+    } 
+
+    if ($qtype eq "TXT" or $qtype eq "ANY") {
+      for my $host (@hosts) {
+	push @ans, Net::DNS::RR->new("$qname. 60 IN TXT '$host->{name}/$host->{ip}'");
+      }
+    } 
+
+    # mark the answer as authoritive (by setting the 'aa' flag
+    return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
+
+  }
+  elsif($config->{ns}->{$qname}) {
+    return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
+
+  }
+  else {
+    return ("NXDOMAIN", [], [], [], { aa => 1 });
+  }
+
 }
+
+my $gi = Geo::IP->new(GEOIP_STANDARD);
 
 my $ns = Net::DNS::Nameserver->new
   (
-   LocalPort    => 5353,
+   LocalPort    => 53,
+   LocalAddr    => $opts{interface},
    ReplyHandler => \&reply_handler,
-   Verbose      => 1,
+   Verbose      => $opts{verbose},
   );
+
+my $uid = getpwnam('ask') or die "could not lookup uid";
+
+setuid($uid) or die "could not setuid: $!";
+
+load_config();
 
 if ($ns) {
   $ns->main_loop;
-} else {
+}
+else {
   die "couldn't create nameserver object\n";
 }
+
+sub pick_groups {
+  my $client_ip = shift;
+  my $qgroup    = shift;
+  my $country   = $gi->country_code_by_addr($client_ip) || 'us';
+  my $continent = continent($country) || 'north-america';
+
+  my @candidates = ($country);
+  push @candidates, $continent
+    unless $continent eq "asia";
+  push @candidates, "";  
+
+  my @groups;
+
+  for my $candidate (@candidates) {
+    my $group = join ".", grep { $_ } $qgroup,$candidate;
+    push @groups, $group if $config->{groups}->{$group};
+  }
+		     
+  @groups;
+}
+
+sub pick_hosts {
+  my ($group) = shift;
+
+  warn "pick hosts";
+
+  return unless $config->{groups}->{$group}; 
+
+  warn "still picking hosts"; 
+
+  my @answer;
+  my $max = 2;
+  $max = 1 unless scalar @{ $config->{groups}->{$group} };
+
+  my $loop = 0;
+
+  while (@answer < $max) {
+    last if ++$loop > 10;  # bad configuration could make us loop ...
+    my ($host) = ( @{ $config->{groups}->{$group} } )[rand scalar @{ $config->{groups}->{$group} }];
+    next if grep { $host eq $_->{name} } @answer;
+    warn "HOST CHOSEN: $host";
+    push @answer, ({ name => $host, ip => $config->{hosts}->{$host}->{ip} });
+  }
+
+  @answer;
+}
+
+sub check_config {
+  return unless time >= ($config->{last_config_check} + 30);
+  for my $file (@{$config->{files}}) {
+    load_config(), last 
+      if (stat($file->[0]))[9] != $file->[1]
+  }
+}
+
+sub load_config {
+
+  $config->{last_config_check} = time;
+  $config->{files} = [];
+
+  read_config('pgeodns.conf');
+
+  die "no ns configured in the config file"
+    unless $config->{ns};
+
+  $config->{serial} = 1 unless $config->{serial} and $config->{serial} =~ m/^\d+$/;
+  $config->{base} ||= 'ddns.develooper.com';
+
+  use Data::Dumper;
+  warn Data::Dumper->Dump([\$config], [qw(config)]);
+
+}
+
+sub read_config {
+  my $file = shift;
+
+  open my $fh, $file
+    or &log("Can't open config file: $file: $!");
+
+  push @{ $config->{files} }, [$file, (stat($file))[9]];
+
+  while (<$fh>) {
+    chomp;
+    s/^\s+//;
+    s/\s+$//;
+    next if /^\#/ or /^$/;
+
+    if (s/^ns\s+//) {
+      my ($name, $ip) = split /\s+/, $_;
+      $config->{ns}->{$name} = $ip;
+      $config->{primary_ns} = $name
+	unless $config->{primary_ns};
+    }
+    elsif (s/^(serial|base)\s+//) {
+      $config->{$1} = $_;
+    }
+    elsif (s/^include\s+//) {
+      read_config($_);
+    }
+    else {
+      s/^\s*10+\s+//;
+      my ($host, $ip, $groups) = split(/\s+/,$_,3);
+      $host = "$host." unless $host =~ m/\.$/;  # or should this be the other way around?
+      $config->{hosts}->{$host} = { ip => $ip };
+      for my $group (split /\s+/, $groups) {
+	$config->{groups}->{$group} = [] unless $config->{groups}->{$group};
+	push @{$config->{groups}->{$group}}, $host;
+      }
+    }
+    
+  }
+
+}
+
+
 
 __END__
 
