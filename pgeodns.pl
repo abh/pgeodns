@@ -46,15 +46,17 @@ sub reply_handler {
   my ($qname, $qclass, $qtype, $peerhost) = @_;
   $qname = lc $qname;
 
-  warn "\nlookup for $qname\n";
+  warn "\n$peerhost | $qname | $qtype $qclass \n";
 
   $stats->{qname}->{$qname}++;
+  $stats->{qtype}->{$qtype}++;
   $stats->{queries}++;
 
   my $base = $config->{base}; 
 
   my (@ans, @auth, @add);
 
+  # when are we supposed to add the SOA record and when the NS records here?
   push @auth, @{ (get_ns_records)[0] };
   push @add, @{ (get_ns_records)[1] };
 
@@ -79,14 +81,17 @@ sub reply_handler {
   if ($qname =~ m/(.*)\.\Q$base\E$/ and $config->{groups}->{$1}) {
     my $qgroup = $1;
 
-    my (@groups) = pick_groups($peerhost, $qgroup);
-
-    warn "groups: ", join " / ", @groups;  
-
     my @hosts;
-    for my $group (@groups) { 
-      push @hosts, pick_hosts($group);
-      last if @hosts >= 2;
+    if ($qtype =~ m/^(A|ANY|TXT)$/) {
+      my (@groups) = pick_groups($peerhost, $qgroup);
+      warn "groups: ", join " / ", @groups;  
+      for my $group (@groups) { 
+	push @hosts, pick_hosts($group);
+	last if @hosts; 
+	  # add ">= 2" to force at least two hosts even if the second one won't be as local 
+      }
+      # only return two hosts
+      # @hosts = (@hosts[0,1]) if @hosts > 2;
     }
     
     if ($qtype eq "A" or $qtype eq "ANY") {
@@ -187,7 +192,7 @@ sub pick_hosts {
     last if ++$loop > 10;  # bad configuration could make us loop ...
     my ($host) = ( @{ $config->{groups}->{$group} } )[rand scalar @{ $config->{groups}->{$group} }];
     next if grep { $host eq $_->{name} } @answer;
-    warn "HOST CHOSEN: $host";
+    warn "HOST CHOSEN: $host\n";
     push @answer, ({ name => $host, ip => $config->{hosts}->{$host}->{ip} });
   }
 
