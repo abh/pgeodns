@@ -11,6 +11,9 @@ use Getopt::Long;
 use lib 'lib';
 use Countries qw(continent);
 
+my $VERSION = ('$Rev: 1 $' =~ m/(\d+)/)[0];
+my $HeadURL = ('$HeadURL: http://svn.develooper.com/repos/pgeodns/pgeodns.pl $' =~ m!http:(//[^/]+.*)/pgeodns.pl!)[0];
+
 my %opts = (verbose => 0);
 GetOptions (\%opts,
 	    'interface=s',
@@ -40,6 +43,12 @@ sub get_ns_records {
   return (\@ans, \@add);
 }
 
+sub get_soa_record {
+    Net::DNS::RR->new
+	("$config->{base}. 3600 IN SOA $config->{primary_ns};
+          dns.perl.org. $config->{serial} 5400 5400 2419200 $config->{ttl}");
+}
+
 sub reply_handler {
   check_config();
 
@@ -64,10 +73,7 @@ sub reply_handler {
     # return NS
 
     if ($qtype eq "SOA" or $qtype eq "ANY") {
-      my $serial = $config->{serial};
-      push @ans, Net::DNS::RR->new
-	("$base. 3600 $qclass $qtype $config->{primary_ns};
-          dns.perl.org. $serial 5400 5400 2419200 300");
+      push @ans, get_soa_record;
     }
     if ($qtype eq "NS" or $qtype eq "ANY") {
       # don't need the authority section for this request ...
@@ -96,15 +102,17 @@ sub reply_handler {
     
     if ($qtype eq "A" or $qtype eq "ANY") {
       for my $host (@hosts) {
-	push @ans, Net::DNS::RR->new("$qname. 180 IN A $host->{ip}");
+	push @ans, Net::DNS::RR->new("$qname. $config->{ttl} IN A $host->{ip}");
       }
     } 
 
     if ($qtype eq "TXT" or $qtype eq "ANY") {
       for my $host (@hosts) {
-	push @ans, Net::DNS::RR->new("$qname. 180 IN TXT '$host->{ip}/$host->{name}'");
+	push @ans, Net::DNS::RR->new("$qname. $config->{ttl} IN TXT '$host->{ip}/$host->{name}'");
       }
     } 
+
+    @auth = (get_soa_record) unless @ans;
 
     # mark the answer as authoritive (by setting the 'aa' flag
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
@@ -116,17 +124,23 @@ sub reply_handler {
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
 
-  elsif ($qname =~ m/status\.\Q$base\E$/) {
-      my $uptime = time - $stats->{started} || 1;
-      # TODO: convert to 2w3d6h format ...
-      my $status = sprintf "%s, upt: %i, q: %i, %.2f/qps",
-        $opts{interface}, $uptime, $stats->{queries}, $stats->{queries}/$uptime;
-      warn Data::Dumper->Dump([\$stats], [qw(stats)]);
-      push @ans, Net::DNS::RR->new("$qname. 0 IN TXT '$status'") if $qtype eq "TXT" or $qtype eq "ANY";
-      return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
+  elsif ($qname =~ m/^status\.\Q$base\E$/) {
+    my $uptime = time - $stats->{started} || 1;
+    # TODO: convert to 2w3d6h format ...
+    my $status = sprintf "%s, upt: %i, q: %i, %.2f/qps",
+      $opts{interface}, $uptime, $stats->{queries}, $stats->{queries}/$uptime;
+    warn Data::Dumper->Dump([\$stats], [qw(stats)]);
+    push @ans, Net::DNS::RR->new("$qname. 0 IN TXT '$status'") if $qtype eq "TXT" or $qtype eq "ANY";
+    return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
+  }
+  elsif ($qname =~ m/^version\.\Q$base\E$/) {
+    my $version = "Rev #$VERSION $HeadURL";
+    push @ans, Net::DNS::RR->new("$qname. 0 IN TXT '$version'") if $qtype eq "TXT" or $qtype eq "ANY";
+    return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
   else {
-    return ("NXDOMAIN", [], [], [], { aa => 1 });
+    @auth = get_soa_record;
+    return ("NXDOMAIN", [], \@auth, [], { aa => 1 });
   }
 
 }
@@ -220,6 +234,7 @@ sub load_config {
 
   $config->{serial} = 1 unless $config->{serial} and $config->{serial} =~ m/^\d+$/;
   $config->{base} ||= 'ddns.develooper.com';
+  $config->{ttl}    = 180 unless $config->{ttl} and $config->{ttl} !~ m/\D/;
 
   use Data::Dumper;
   warn Data::Dumper->Dump([\$config], [qw(config)]);
@@ -246,7 +261,7 @@ sub read_config {
       $config->{primary_ns} = $name
 	unless $config->{primary_ns};
     }
-    elsif (s/^(serial|base)\s+//) {
+    elsif (s/^(serial|base|ttl)\s+//) {
       $config->{$1} = $_;
     }
     elsif (s/^include\s+//) {
@@ -284,8 +299,12 @@ Net::DNS::Nameserver for distributing different replies based on the
 source location of the request.  It uses Geo::IP to make the
 determination.
 
-=head1 AUTHOR
+=head1 REFERENCES
 
-Robert Spier <rspier@cpan.org>
+RFC2308  http://www.faqs.org/rfcs/rfc2308.html
+
+=head1 COPYRIGHT
+
+Copyright 2004 Develooper LLC
 
 =cut
