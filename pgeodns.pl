@@ -76,7 +76,7 @@ sub reply_handler {
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
 
-  if ($qname =~ m/(.*)\Q$base\E$/ and $config->{groups}->{$1}) {
+  if ($qname =~ m/(.*)\.\Q$base\E$/ and $config->{groups}->{$1}) {
     my $qgroup = $1;
 
     my (@groups) = pick_groups($peerhost, $qgroup);
