@@ -151,7 +151,7 @@ my %continent_country = (
       'Poland',
       'Portugal',
       'Romania',
-      'Russian Federation',
+      'Russia',
       'San Marino',
       'Serbia/Montenegro ',
       'Yugoslavia',
@@ -421,7 +421,7 @@ py     Paraguay
 qa     Qatar
 re     Reunion (French)
 ro     Romania
-ru     Russian Federation
+ru     Russia
 rw     Rwanda
 sa     Saudi Arabia
 sb     Solomon Islands
