@@ -4,6 +4,9 @@
 #
 #  Normally starts a process in the background
 #  unless "bg" is given as the second argument.
+#
+#  This was written by Ask Bjoern Hansen and Tim Bunce.
+#
 
 trap '' 1 15 # ignore SIG HUP & TERM
 
