@@ -42,5 +42,5 @@ do
 	msg="$PROGRAM $@ exited with status $status - will restart (parent=$$)"
 	logger -p 'local0.warning' "$msg"
 	echo "$msg"
-	sleep 2
+	sleep 5
 done   
