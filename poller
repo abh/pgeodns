@@ -38,15 +38,10 @@ while (1) {
     my $tmp_file = "$opt_file.$$.tmp";
     open CONF, ">$tmp_file" or die "Could not open $tmp_file: $!";
     for my $mod (values %modules) {
-      print CONF join "\n", $mod->lb_list;
+      print CONF join("\n", $mod->lb_list),"\n";
     }
-    print CONF "\n";
     close CONF or die "Could not close $tmp_file: $!";
     rename $tmp_file, $opt_file or die "Could not rename $tmp_file to $opt_file: $!";
-  }
-
-  if (time-$time_started > 7200) {
-    exit;
   }
 
   logit "waiting";

@@ -2,6 +2,7 @@
 
 #cd /usr/local/dinamed
 
-./daemon_wrapper ./dinamed -l log -i ddns1.develooper.com -n 
+./daemon_wrapper ./poller &
+./daemon_wrapper ./dinamed -l log -i ddns1.develooper.com -n &
 
 
