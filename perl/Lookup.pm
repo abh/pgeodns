@@ -19,7 +19,7 @@ sub lookup {
     #warn "name: $name\n";
     $name =~ s/.*\.([^.]+)$/$1/;
     $name = "us"  # blatant assumtions at play
-      if $name =~ m/^(com|edu|mil|gov)$/;
+      if $name =~ m/^(com|net|org|edu|mil|gov)$/;
     #warn "name2: $name";
     $db{$ip} = time. ":$name";
   }
