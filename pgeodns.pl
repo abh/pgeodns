@@ -42,7 +42,7 @@ sub reply_handler {
   check_config();
 
   my ($qname, $qclass, $qtype, $peerhost) = @_;
-
+  $qname = lc $qname;
 
   my $base = $config->{base}; 
 
@@ -69,7 +69,7 @@ sub reply_handler {
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
 
-  if ($qname =~ m/(.*)\.ddns\.develooper\.com$/ and $config->{groups}->{$1}) {
+  if ($qname =~ m/(.*)\Q$base\E$/ and $config->{groups}->{$1}) {
     my $qgroup = $1;
 
     warn "looking for $qname or something; group is $qgroup ...";
@@ -86,13 +86,13 @@ sub reply_handler {
     
     if ($qtype eq "A" or $qtype eq "ANY") {
       for my $host (@hosts) {
-	push @ans, Net::DNS::RR->new("$qname. 60 IN A $host->{ip}");
+	push @ans, Net::DNS::RR->new("$qname. 180 IN A $host->{ip}");
       }
     } 
 
     if ($qtype eq "TXT" or $qtype eq "ANY") {
       for my $host (@hosts) {
-	push @ans, Net::DNS::RR->new("$qname. 60 IN TXT '$host->{name}/$host->{ip}'");
+	push @ans, Net::DNS::RR->new("$qname. 180 IN TXT '$host->{ip}/$host->{name}'");
       }
     } 
 
@@ -138,7 +138,7 @@ else {
 sub pick_groups {
   my $client_ip = shift;
   my $qgroup    = shift;
-  my $country   = $gi->country_code_by_addr($client_ip) || 'us';
+  my $country   = lc($gi->country_code_by_addr($client_ip) || 'us');
   my $continent = continent($country) || 'north-america';
 
   my @candidates = ($country);
@@ -192,6 +192,7 @@ sub check_config {
 
 sub load_config {
 
+  $config = {};
   $config->{last_config_check} = time;
   $config->{files} = [];
 
