@@ -8,6 +8,7 @@ use vars qw(@ISA @EXPORT_OK %db);
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(lookup);
 
+my $use_geod = 0;
 
 my $last_sync = 0;
 my $tied      = 0;
@@ -42,6 +43,10 @@ sub lookup {
 
 
 my $res = Net::DNS::Resolver->new;
+if ($use_geod) {
+  $res->nameservers("ddns1.develooper.com");
+  $res->port(8053);
+}
 
 sub ip2name {
   my ($ip, $timeout) = @_;
@@ -50,14 +55,21 @@ sub ip2name {
 
   my $pkt;
 
+  $ip = "$ip.geo.ddns.develooper.com" 
+    if $use_geod;
+
   eval {
     local $SIG{ALRM} = sub { die "TIMEOUT\n" };
     alarm($timeout);
-    $pkt = $res->query($ip);
+    $pkt = $res->query($ip, $use_geod ? 'TXT' : ());
     alarm(0);
   };
   if ($@ =~ /TIMEOUT/) {
     print "got dns timeout for $ip\n";
+  }
+
+  unless ($pkt) {
+    print "query failed: ", $res->errorstring, "\n";
   }
 
   $pkt or return "";
@@ -65,8 +77,13 @@ sub ip2name {
   my @ans = $pkt->answer;
 
   foreach my $rr (@ans) {
-    return lc $rr->ptrdname if $rr->type eq 'PTR';
-    return lc $rr->name if  $rr->type eq 'A';
+    if ($use_geod) {
+      return lc $rr->txtdata if $rr->type eq 'TXT';
+    } 
+    else {
+      return lc $rr->ptrdname if $rr->type eq 'PTR';
+      return lc $rr->name if  $rr->type eq 'A';
+    }
   }
 
   "";
