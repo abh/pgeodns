@@ -11,8 +11,8 @@ use Getopt::Long;
 use lib 'lib';
 use Countries qw(continent);
 
-my $VERSION = ('$Rev: 1 $' =~ m/(\d+)/)[0];
-my $HeadURL = ('$HeadURL: http://svn.develooper.com/repos/pgeodns/pgeodns.pl $' =~ m!http:(//[^/]+.*)/pgeodns.pl!)[0];
+my $VERSION = ('$Rev$' =~ m/(\d+)/)[0];
+my $HeadURL = ('$HeadURL$' =~ m!http:(//[^/]+.*)/pgeodns.pl!)[0];
 
 my %opts = (verbose => 0);
 GetOptions (\%opts,
@@ -294,17 +294,56 @@ pgeodns - Perl Geographic DNS Server
 
 =head1 OVERVIEW
 
-A small perl dns server, heavily based on an example from
-Net::DNS::Nameserver for distributing different replies based on the
-source location of the request.  It uses Geo::IP to make the
+A small perl dns server for distributing different replies based on
+the source location of the request.  It uses Geo::IP to make the
 determination.
 
+=head1 OPTIONS
+
+=over 4
+
+=item --interface [ip]
+
+The interface to bind to.
+
+=item --user [user / uid]
+
+The username or uid to run as after binding to port 53.
+
+=item --verbose
+
+Print even more status output.
+
+=back
+
+=head1 CONFIGURATION
+
+pgeodns.conf in the current directory.  Review it and the included
+samples in conf/* until it gets documented. :-)
+
+    
 =head1 REFERENCES
 
 RFC2308  http://www.faqs.org/rfcs/rfc2308.html
 
+=head1 BUGS?  COMMENTS?
+
+Send them to ask@develooper.com.
+
 =head1 COPYRIGHT
 
-Copyright 2004 Develooper LLC
+Copyright 2004 Ask Bjoern Hansen, Develooper LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 =cut

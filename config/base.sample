@@ -1,5 +1,6 @@
 ns ns1.ddns.develooper.com 127.0.0.1
 ns ddns5.develooper.com
 
+ttl 600
 serial 101
 
