@@ -25,7 +25,16 @@ http://sourceforge.net/projects/dinamed/ is your best bet.
 Get started
 -----------
 
-From the dinamed directory run
+First you need to get the configuration. If you are running a
+nameserver for cpan.org etc, then something like
+
+  rsync --port 7873 -av ddns1.develooper.com::dinamed-conf ~/dinamed/conf/dist/
+
+will get you going. Remember to put that command into cron, running
+every 7 minutes or so.
+
+
+Then to start the nameserver, from the dinamed directory run
 
  ./dinamed -i [ip|hostname] -l log
 
@@ -57,25 +66,14 @@ Try
 Known problems
 --------------
 
-It leaves a core file when you ctrl-c it in debug mode (-d). I haven't
-had time to look into that.
-
-It's spewing out an awful amount of debug junk even when
-not in debug mode. Oh well.
-
-It doesn't know how to shutdown in a way daemon_wrapper understands,
-so making it stop is a pain. 
-
-Depending on your platform, something like
-
-  ps axw | grep dinamed | grep -v grep | awk '{print $1}' | xargs kill -9
-
-should do it. =)
+See the TODO file.
 
 
 Who did that?
 -------------
 
-schemers@eng.sun.com and riepel@networking.stanford.edu wrote the original
-lbnamed. Ask Bjoern Hansen, ask@develooper.com, made dinamed heavily based
-on their work.
+schemers@eng.sun.com and riepel@networking.stanford.edu wrote the
+original lbnamed.
+
+Ask Bjoern Hansen, ask@develooper.com, made dinamed heavily based on
+their work.

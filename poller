@@ -6,7 +6,7 @@ use vars qw(@poller_modules);
 
 require 'poller.conf';
 
-my $opt_file = "dinamed.config.lb";
+my $opt_file = "conf/dist/dinamed.config.lb";
 
 sub logit {
   print STDERR scalar localtime, " $$ [poller] ", join(" ", @_), "\n";
@@ -46,7 +46,7 @@ while (1) {
   }
 
   logit "waiting";
-  sleep 1200;
+  sleep 350;
 }
 
 
