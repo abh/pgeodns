@@ -1,9 +1,12 @@
 #!/usr/bin/perl -w 
 use strict;
-use Regions qw(%country_code %country_continent);
-use LWP::Simple qw(mirror RC_OK RC_NOT_MODIFIED);
+use lib 'perl';
 
-my $opt_file = "cpan.config.lb";
+use vars qw(@poller_modules);
+
+require 'poller.conf';
+
+my $opt_file = "dinamed.config.lb";
 
 sub logit {
   print STDERR scalar localtime, " $$ [poller] ", join(" ", @_), "\n";
@@ -13,58 +16,39 @@ logit "starting";
 
 $| = 1;
 
-#do_conversion();
-#exit;
+my %modules;
+
+for my $mod (@poller_modules) {
+  $modules{$mod} = eval "use Poller::$mod; new Poller::$mod";
+  warn $@ if $@;
+}
 
 while (1) {
-  if (get_rrlist()) {
-    do_conversion();
+  my @to_convert;
+  for my $mod (values %modules) {
+    push @to_convert, $mod if $mod->check_data or !$mod->lb_list;
   }
+  for my $mod (@to_convert) {
+    $mod->convert;
+  }
+
+  if (@to_convert) {
+    my $tmp_file = "$opt_file.$$.tmp";
+    open CONF, ">$tmp_file" or die "Could not open $tmp_file: $!";
+    for my $mod (values %modules) {
+      print CONF join "\n", $mod->lb_list;
+    }
+    close CONF or die "Could not close $tmp_file: $!";
+    rename $tmp_file, $opt_file or die "Could not rename $tmp_file to $opt_file: $!";
+  }
+ 
+
   logit "waiting";
   sleep 1200;
 }
 
-sub get_rrlist {
-  my $mirror_rv = mirror("http://mirror.cpan.org/rrlist.txt", "CPAN.data");
-  if ($mirror_rv == RC_NOT_MODIFIED) {
-    return 0;
-  }
-  unless ($mirror_rv == RC_OK) {
-    logit "poller could not get rrlist: $mirror_rv\n";
-    return 0
-  }
-  return 1;
-}
+#  kill 1, `cat dinamed.pid`;
 
-sub do_conversion {
-  open DATA, "./CPAN.data" or die "Could not open CPAN.data: $!";
-  my $tmp_file = "$opt_file.$$.tmp";
-  open CONF, ">$tmp_file" or die "Could not open $tmp_file: $!";
-  while (<DATA>) {
-    next unless m/\S/;
-    chomp;
-    my ($url, $host, $bandwidth, $contact, $country) = map { $_ =~ s/\s*$//; $_ } split /\t/, $_;
-    next unless $url =~ m!ftp://[^/]+/pub/CPAN/!;
-    #print "$host / $bandwidth / $country\n";
-    my $ip = join ".", unpack('C4',((gethostbyname($host))[4])[0]); 
-
-    my $country_code = $country_code{$country};
-    my $continent    = $country_continent{$country};
-    $continent =~ s/ /-/g;
-
-    printf CONF "%5i %-30s %-15s ftp.cpan %-11s %-20s\n", 1000, "$host.", $ip,
-       ($country_code ? "ftp.$country_code.cpan" : ""),
-       ($continent    ? "ftp.$continent.cpan"    : ""),
-  }
-  close DATA or die "Could not close CPAN.data: $!";
-  close CONF or die "Could not close tmp conf file: $!";
-  rename $tmp_file, $opt_file or die "Could not rename $tmp_file to $opt_file: $!";
-
-  kill 1, `cat dinamed.pid`;
-
-#  print FILE "$weight $host $ip $aliases{$host}\n";
-
-}
 
 __END__
 # "$weight $host $ip $aliases{$host}\n";
