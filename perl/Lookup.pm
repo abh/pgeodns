@@ -1,6 +1,7 @@
 package Lookup;
 use strict;
-use DB_File;
+use Tie::Cache::LRU;
+use Fcntl;
 use Net::DNS;
 use Socket;
 use Exporter;
@@ -8,22 +9,22 @@ use vars qw(@ISA @EXPORT_OK %db);
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(lookup);
 
-my $use_geod = 0;
+my $use_geod = 1;
 
-my $last_sync = 0;
-my $tied      = 0;
-sub retie {
-  untie %db;
-  tie %db, "DB_File", "db/ip_country"
-    or die "Cannot open file 'db/ip_country': $!\n";
-  $last_sync = time;
-  $tied = 1;
+#my $last_sync = 0;
+#my $tied      = 0;
+tie %db, "Tie::Cache::LRU", 4000;
 
-}
+#"db/ip_country", O_RDWR|O_CREAT, 0640
+#    or die "Cannot open file 'db/ip_country': $!\n";
+#  $last_sync = time;
+#  $tied = 1;
+#
+#}
 
 sub lookup {
   my ($ip, $force) = @_;
-  retie unless $tied;
+  #retie unless $tied;
   if ($force
       or !$db{$ip}
       or (time-(split ":", $db{$ip})[0] > 86400*31)) {
@@ -35,7 +36,7 @@ sub lookup {
       if $name =~ m/^(com|net|org|edu|mil|gov)$/;
     #warn "name2: $name";
     $db{$ip} = time. ":$name";
-    retie if (time-$last_sync > 60);
+    #retie if (time-$last_sync > 60);
 
   }
   (split ":", $db{$ip})[1]
