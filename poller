@@ -40,6 +40,7 @@ while (1) {
     for my $mod (values %modules) {
       print CONF join "\n", $mod->lb_list;
     }
+    print CONF "\n";
     close CONF or die "Could not close $tmp_file: $!";
     rename $tmp_file, $opt_file or die "Could not rename $tmp_file to $opt_file: $!";
   }
