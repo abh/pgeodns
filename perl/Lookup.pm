@@ -1,6 +1,7 @@
 package Lookup;
 use strict;
 use DB_File;
+use Net::DNS;
 use Socket;
 use Exporter;
 use vars qw(@ISA @EXPORT_OK %db);
@@ -9,20 +10,22 @@ use vars qw(@ISA @EXPORT_OK %db);
 
 
 my $last_sync = 0;
-
+my $tied      = 0;
 sub retie {
   untie %db;
   tie %db, "DB_File", "db/ip_country"
     or die "Cannot open file 'db/ip_country': $!\n";
   $last_sync = time;
+  $tied = 1;
+
 }
 
-retie;
-
 sub lookup {
-  my $ip = shift;
-  if (!$db{$ip} or
-     (time-(split ":", $db{$ip})[0] > 86400*7)) {
+  my ($ip, $force) = @_;
+  retie unless $tied;
+  if ($force
+      or !$db{$ip}
+      or (time-(split ":", $db{$ip})[0] > 86400*31)) {
     #warn "Looking up $ip";
     my $name = lc ip2name($ip);
     #warn "name: $name\n";
@@ -37,21 +40,38 @@ sub lookup {
   (split ":", $db{$ip})[1]
 }
 
+
+my $res = Net::DNS::Resolver->new;
+
 sub ip2name {
-  my $ip = shift;
-  my $hostname = "";
+  my ($ip, $timeout) = @_;
+
+  $timeout ||= 3;
+
+  my $pkt;
+
   eval {
     local $SIG{ALRM} = sub { die "TIMEOUT\n" };
-    alarm(3);
-    $hostname = gethostbyaddr(gethostbyname($ip), AF_INET);
+    alarm($timeout);
+    $pkt = $res->query($ip);
     alarm(0);
   };
   if ($@ =~ /TIMEOUT/) {
     print "got dns timeout for $ip\n";
   }
 
-  $hostname ? $hostname : "";
+  $pkt or return "";
+
+  my @ans = $pkt->answer;
+
+  foreach my $rr (@ans) {
+    return lc $rr->ptrdname if $rr->type eq 'PTR';
+    return lc $rr->name if  $rr->type eq 'A';
+  }
+
+  "";
 }
+
 
 END {
   untie %db;
