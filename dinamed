@@ -3,9 +3,12 @@
 #
 # dinamed - load balancing name server in perl5
 #
-# $Id: dinamed,v 1.1 2001/04/22 12:52:35 ask Exp $
+# $Id: dinamed,v 1.2 2001/04/23 06:26:27 ask Exp $
 #
 # $Log: dinamed,v $
+# Revision 1.2  2001/04/23 06:26:27  ask
+# moved perl modules to ./perl/
+#
 # Revision 1.1  2001/04/22 12:52:35  ask
 # commit working directory to sourceforge
 #
@@ -16,6 +19,8 @@
 
 use Socket;
 use Sys::Hostname;
+
+use lib 'perl';
 
 use DNS;
 use LBDB;
