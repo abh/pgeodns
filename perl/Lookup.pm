@@ -7,8 +7,17 @@ use vars qw(@ISA @EXPORT_OK %db);
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(lookup);
 
-tie %db, "DB_File", "db/ip_country"
-  or die "Cannot open file 'db/ip_country': $!\n";
+
+my $last_sync = 0;
+
+sub retie {
+  untie %db;
+  tie %db, "DB_File", "db/ip_country"
+    or die "Cannot open file 'db/ip_country': $!\n";
+  $last_sync = time;
+}
+
+retie;
 
 sub lookup {
   my $ip = shift;
@@ -22,6 +31,8 @@ sub lookup {
       if $name =~ m/^(com|net|org|edu|mil|gov)$/;
     #warn "name2: $name";
     $db{$ip} = time. ":$name";
+    retie if (time-$last_sync > 60);
+
   }
   (split ":", $db{$ip})[1]
 }
