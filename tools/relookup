@@ -1,0 +1,34 @@
+#!/usr/bin/perl -w 
+use strict;
+use lib 'perl';
+use DB_File;
+use Net::DNS;
+use Lookup;
+
+my $ns = shift @ARGV or die "no nameserver?";
+
+my %d;
+tie(%d, "DB_File", "/tmp/ip_country") or die "could not tie: $!";
+
+my $res = new Net::DNS::Resolver;
+$res->nameservers($ns);
+
+while (my ($ip, $data) = each %d) {
+  next if (split ":", $data)[1];
+  print "rechecking $ip ...";
+  my $name = Lookup::ip2name($ip, 8);
+  print " - got $name\n"; 
+  #print "asking ddns1 for $ip.reload.mgmt.ddns.develooper.com\n";
+  my $query = $res->search("$ip.reload.mgmt.ddns.develooper.com", "TXT");
+  if ($query) {
+    foreach my $rr ($query->answer) {
+      next unless $rr->type eq "TXT";
+      print "$ns now says: ", $rr->txtdata, "\n";
+    }
+  }
+  else {
+    print "query failed: ", $res->errorstring, "\n";
+  }
+
+
+}
