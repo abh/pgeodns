@@ -14,10 +14,12 @@ use Countries qw(continent);
 my %opts = (verbose => 0);
 GetOptions (\%opts,
 	    'interface=s',
+	    'user=s',
 	    'verbose!',
 	   ) or die "invalid options";
 
 die "--interface [ip] required\n" unless $opts{interface};
+die "--user [user|uid] required\n" unless $opts{user};
 
 my $config;
 
@@ -118,7 +120,9 @@ my $ns = Net::DNS::Nameserver->new
    Verbose      => $opts{verbose},
   );
 
-my $uid = getpwnam('ask') or die "could not lookup uid";
+my $uid = $opts{user};
+$uid = getpwnam($uid) or die "could not lookup uid"
+ if $uid =~ m/\D/;
 
 setuid($uid) or die "could not setuid: $!";
 
