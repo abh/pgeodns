@@ -13,7 +13,7 @@ my $use_geod = 1;
 
 #my $last_sync = 0;
 #my $tied      = 0;
-tie %db, "Tie::Cache::LRU", 4000;
+tie %db, "Tie::Cache::LRU", 5000;
 
 #"db/ip_country", O_RDWR|O_CREAT, 0640
 #    or die "Cannot open file 'db/ip_country': $!\n";
@@ -28,13 +28,10 @@ sub lookup {
   if ($force
       or !$db{$ip}
       or (time-(split ":", $db{$ip})[0] > 86400*31)) {
-    #warn "Looking up $ip";
     my $name = lc ip2name($ip);
-    #warn "name: $name\n";
     $name =~ s/.*\.([^.]+)$/$1/;
     $name = "us"  # blatant assumtions at play
       if $name =~ m/^(com|net|org|edu|mil|gov)$/;
-    #warn "name2: $name";
     $db{$ip} = time. ":$name";
     #retie if (time-$last_sync > 60);
 
