@@ -1,5 +1,7 @@
 #!/usr/bin/perl -w
 
+use lib 'lib';
+
 use Net::DNS;
 use Net::DNS::Nameserver;
 use Geo::IP;
@@ -7,8 +9,8 @@ use strict;
 use warnings;
 use POSIX qw(setuid);
 use Getopt::Long;
+use Socket;
 
-use lib 'lib';
 use Countries qw(continent);
 
 my $VERSION = ('$Rev$' =~ m/(\d+)/)[0];
@@ -21,7 +23,7 @@ GetOptions (\%opts,
 	    'verbose!',
 	   ) or die "invalid options";
 
-die "--interface [ip] required\n" unless $opts{interface};
+die "--interface [ip|hostname] required\n" unless $opts{interface};
 die "--user [user|uid] required\n" unless $opts{user};
 
 my $config;
@@ -130,16 +132,17 @@ sub reply_handler {
     my $status = sprintf "%s, upt: %i, q: %i, %.2f/qps",
       $opts{interface}, $uptime, $stats->{queries}, $stats->{queries}/$uptime;
     warn Data::Dumper->Dump([\$stats], [qw(stats)]);
-    push @ans, Net::DNS::RR->new("$qname. 0 IN TXT '$status'") if $qtype eq "TXT" or $qtype eq "ANY";
+    push @ans, Net::DNS::RR->new("$qname. 1 IN TXT '$status'") if $qtype eq "TXT" or $qtype eq "ANY";
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
   elsif ($qname =~ m/^version\.\Q$base\E$/) {
-    my $version = "Rev #$VERSION $HeadURL";
-    push @ans, Net::DNS::RR->new("$qname. 0 IN TXT '$version'") if $qtype eq "TXT" or $qtype eq "ANY";
+    my $version = "$opts{interface}, Rev #$VERSION $HeadURL";
+    push @ans, Net::DNS::RR->new("$qname. 1 IN TXT '$version'") if $qtype eq "TXT" or $qtype eq "ANY";
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
   else {
     @auth = get_soa_record;
+    warn "return cruft ...";
     return ("NXDOMAIN", [], \@auth, [], { aa => 1 });
   }
 
@@ -147,13 +150,24 @@ sub reply_handler {
 
 my $gi = Geo::IP->new(GEOIP_STANDARD);
 
+my $localaddr = $opts{interface};
+
+if ($localaddr =~ /[^\d\.]/) {
+    my $addr = inet_ntoa((gethostbyname($localaddr))[4]);
+    die "could not lookup $localaddr\n" unless $addr;
+    $localaddr = $addr;
+}
+
 my $ns = Net::DNS::Nameserver->new
   (
    LocalPort    => 53,
-   LocalAddr    => $opts{interface},
+   LocalAddr    => $localaddr,
    ReplyHandler => \&reply_handler,
    Verbose      => $opts{verbose},
   );
+
+# print error?
+die "couldn't create nameserver object\n" unless $ns;
 
 my $uid = $opts{user};
 $uid = getpwnam($uid) or die "could not lookup uid"
