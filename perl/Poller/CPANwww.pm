@@ -1,13 +1,12 @@
-package Poller::CPAN;
+package Poller::CPANwww;
 use strict;
 use Poller;
 use vars qw(@ISA);
 @ISA = qw(Poller);
 use Regions qw(%country_code %country_continent);
-use LWP::Simple qw(mirror RC_OK RC_NOT_MODIFIED);
 
 sub new {
-  warn "loading CPAN poller module ...";
+  warn "loading CPANwww poller module ...";
   my $proto = shift;
   my $class = ref($proto) || $proto;
   $class->SUPER::new();
@@ -15,7 +14,7 @@ sub new {
 
 sub check_data {
   my $self = shift;
-  $self->mirror_url("http://mirror.cpan.org/rrlist.txt");
+  $self->mirror_url("http://miette.develooper.com/~ask/CPANwww.txt");
 }
 
 sub convert {
@@ -27,7 +26,7 @@ sub convert {
     next unless m/\S/;
     chomp;
     my ($url, $host, $bandwidth, $contact, $country) = map { $_ =~ s/\s*$//; $_ } split /\t/, $_;
-    next unless $url =~ m!ftp://[^/]+/pub/CPAN/!;
+    #next unless $url =~ m!ftp://[^/]+/pub/CPAN/!;
     #print "$host / $bandwidth / $country\n";
     my $ip = join ".", unpack('C4',((gethostbyname($host))[4])[0]); 
 
@@ -35,9 +34,9 @@ sub convert {
     my $continent    = $country_continent{$country} or warn "no continent for [$country]\n";
     $continent =~ s/ /-/g;
 
-    push @lb_data, sprintf "%5i %-30s %-15s ftp.cpan %-11s %-20s", 1000, "$host.", $ip,
-       ($country_code ? "ftp.$country_code.cpan" : ""),
-       ($continent    ? "ftp.$continent.cpan"    : ""),
+    push @lb_data, sprintf "%5i %-30s %-15s www.cpan %-11s %-20s", 1000, "$host.", $ip,
+       ($country_code ? "www.$country_code.cpan" : ""),
+       ($continent    ? "www.$continent.cpan"    : ""),
   }
   close DATA or die "Could not close $file: $!";
 
