@@ -30,6 +30,8 @@ sub convert {
     next unless $url =~ m!ftp://[^/]+/pub/CPAN/!;
     #print "$host / $bandwidth / $country\n";
     my $ip = join ".", unpack('C4',((gethostbyname($host))[4])[0]); 
+    
+    next if $ip eq "192.75.95.77";
 
     my $country_code = $country_code{$country};
     my $continent    = $country_continent{$country} or warn "no continent for [$country]\n";

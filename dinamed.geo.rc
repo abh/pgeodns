@@ -1,0 +1,9 @@
+#!/bin/sh
+
+#cd /usr/local/dinamed
+
+/usr/local/bin/rsync --daemon --port 7873 --conf ~/dinamed/conf/rsyncd.conf
+
+./daemon_wrapper /home/perl/bin/perl ./dinamed -l log.geo -p 8053 -i ddns1.develooper.com -n -c geod.conf &
+
+
