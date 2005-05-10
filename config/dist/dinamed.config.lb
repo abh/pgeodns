@@ -1,0 +1,54 @@
+base ddns.develooper.com.
+ 1000 ftp.planetmirror.com.          203.16.234.19   ftp.apache ftp.apache.au ftp.apache.oceania  
+ 1000 ftp.pop-mg.com.br.             200.236.165.81  ftp.apache ftp.apache.br ftp.apache.south-america
+ 1000 crysys.hit.bme.hu.             152.66.249.135  ftp.apache ftp.apache.hu ftp.apache.europe   
+ 1000 ftp.apache.inetcosmos.org.     194.20.107.142  ftp.apache ftp.apache.it ftp.apache.europe   
+ 1000 ftp.gbnet.net.                 194.70.126.12   ftp.apache ftp.apache.uk                     
+ 1000 ftp.plig.net.                  195.40.6.41     ftp.apache ftp.apache.uk                     
+ 1000 mirrors.rmplc.co.uk.           194.238.48.5    ftp.apache ftp.apache.uk                     
+ 1000 apache.secsup.org.             208.209.50.18   ftp.apache ftp.apache.us ftp.apache.north-america
+ 1000 ftp.saix.net.                  196.25.240.137  ftp.apache ftp.apache.za ftp.apache.africa   
+ 1000 ftp.tuwien.ac.at.              192.35.244.50   ftp.cpan ftp.at.cpan ftp.europe.cpan      ftp.cpan.at ftp.cpan.europe     
+ 1000 ftp.easynet.be.                212.100.160.33  ftp.cpan ftp.be.cpan ftp.europe.cpan      ftp.cpan.be ftp.cpan.europe     
+ 1000 sunsite.ualberta.ca.           129.128.5.190   ftp.cpan ftp.ca.cpan ftp.north-america.cpan ftp.cpan.ca ftp.cpan.north-america
+ 1000 cpan.chebucto.ns.ca.           192.75.95.80    ftp.cpan ftp.ca.cpan ftp.north-america.cpan ftp.cpan.ca ftp.cpan.north-america
+ 1000 cpan.mirror.cygnal.ca.         24.244.193.22   ftp.cpan ftp.ca.cpan ftp.north-america.cpan ftp.cpan.ca ftp.cpan.north-america
+ 1000 theoryx5.uwinnipeg.ca.         142.132.65.108  ftp.cpan ftp.ca.cpan ftp.north-america.cpan ftp.cpan.ca ftp.cpan.north-america
+ 1000 cpan.netglobalis.net.          200.14.80.77    ftp.cpan ftp.cl.cpan ftp.south-america.cpan ftp.cpan.cl ftp.cpan.south-america
+ 1000 ftp.linux.hr.                  161.53.40.27    ftp.cpan ftp.hr.cpan ftp.europe.cpan      ftp.cpan.hr ftp.cpan.europe     
+ 1000 ftp.fi.muni.cz.                147.251.48.205  ftp.cpan ftp.cz.cpan ftp.europe.cpan      ftp.cpan.cz ftp.cpan.europe     
+ 1000 cpan.cict.fr.                  195.220.60.30   ftp.cpan ftp.fr.cpan ftp.europe.cpan      ftp.cpan.fr ftp.cpan.europe     
+ 1000 cpan.noris.de.                 62.128.1.71     ftp.cpan ftp.de.cpan ftp.europe.cpan      ftp.cpan.de ftp.cpan.europe     
+ 1000 pandemonium.tiscali.de.        195.52.219.14   ftp.cpan ftp.de.cpan ftp.europe.cpan      ftp.cpan.de ftp.cpan.europe     
+ 1000 ftp.leo.org.                   131.159.72.23   ftp.cpan ftp.de.cpan ftp.europe.cpan      ftp.cpan.de ftp.cpan.europe     
+ 1000 ftp.rub.de.                    134.147.32.70   ftp.cpan ftp.de.cpan ftp.europe.cpan      ftp.cpan.de ftp.cpan.europe     
+ 1000 cpan.indigo.ie.                194.125.133.8   ftp.cpan ftp.ie.cpan ftp.europe.cpan      ftp.cpan.ie ftp.cpan.europe     
+ 1000 ftp.ayamura.org.               203.174.65.13   ftp.cpan ftp.jp.cpan ftp.asia.cpan        ftp.cpan.jp ftp.cpan.asia       
+ 1000 ftp.u-aizu.ac.jp.              163.143.1.21    ftp.cpan ftp.jp.cpan ftp.asia.cpan        ftp.cpan.jp ftp.cpan.asia       
+ 1000 ftp.dei.uc.pt.                 193.136.239.1   ftp.cpan ftp.pt.cpan ftp.europe.cpan      ftp.cpan.pt ftp.cpan.europe     
+ 1000 ftp.roedu.net.                 141.85.128.58   ftp.cpan ftp.ro.cpan ftp.europe.cpan      ftp.cpan.ro ftp.cpan.europe     
+ 1000 ftp.corbina.ru.                195.14.50.21    ftp.cpan ftp.ru.cpan ftp.europe.cpan      ftp.cpan.ru ftp.cpan.europe     
+ 1000 mirror.averse.net.             203.127.221.98  ftp.cpan ftp.sg.cpan ftp.asia.cpan        ftp.cpan.sg ftp.cpan.asia       
+ 1000 ftp.saix.net.                  196.25.240.137  ftp.cpan ftp.za.cpan ftp.africa.cpan      ftp.cpan.za ftp.cpan.africa     
+ 1000 ftp.du.se.                     130.243.32.22   ftp.cpan ftp.se.cpan ftp.europe.cpan      ftp.cpan.se ftp.cpan.europe     
+ 1000 ftp.isu.edu.tw.                140.127.177.17  ftp.cpan ftp.tw.cpan ftp.asia.cpan        ftp.cpan.tw ftp.cpan.asia       
+ 1000 ftp.tku.edu.tw.                163.13.240.201  ftp.cpan ftp.tw.cpan ftp.asia.cpan        ftp.cpan.tw ftp.cpan.asia       
+ 1000 cpan.etla.org.                 212.13.199.135  ftp.cpan ftp.gb.cpan ftp.europe.cpan      ftp.cpan.gb ftp.cpan.europe     
+ 1000 ftp.demon.co.uk.               194.159.255.135 ftp.cpan ftp.gb.cpan ftp.europe.cpan      ftp.cpan.gb ftp.cpan.europe     
+ 1000 mirrors.kernel.org.            204.152.189.120 ftp.cpan ftp.us.cpan ftp.north-america.cpan ftp.cpan.us ftp.cpan.north-america
+ 1000 cpan.digisle.net.              216.182.78.14   ftp.cpan ftp.us.cpan ftp.north-america.cpan ftp.cpan.us ftp.cpan.north-america
+ 1000 cpan-du.viaverio.com.          199.239.233.95  ftp.cpan ftp.us.cpan ftp.north-america.cpan ftp.cpan.us ftp.cpan.north-america
+ 1000 cpan-sj.viaverio.com.          128.121.60.235  ftp.cpan ftp.us.cpan ftp.north-america.cpan ftp.cpan.us ftp.cpan.north-america
+ 1000 csociety-ftp.ecn.purdue.edu.   128.46.156.117  ftp.cpan ftp.us.cpan ftp.north-america.cpan ftp.cpan.us ftp.cpan.north-america
+ 1000 cpan.calvin.edu.               153.106.5.70    ftp.cpan ftp.us.cpan ftp.north-america.cpan ftp.cpan.us ftp.cpan.north-america
+ 1000 mirrors.phenominet.com.        209.120.136.27  ftp.cpan ftp.us.cpan ftp.north-america.cpan ftp.cpan.us ftp.cpan.north-america
+ 1000 cpan.llarian.net.              209.221.142.118 ftp.cpan ftp.us.cpan ftp.north-america.cpan ftp.cpan.us ftp.cpan.north-america
+ 1000 ftp-mirror.internap.com.       64.74.207.33    ftp.cpan ftp.us.cpan ftp.north-america.cpan ftp.cpan.us ftp.cpan.north-america
+ 1000 mirror.telentente.com.         65.59.243.73    ftp.cpan ftp.us.cpan ftp.north-america.cpan ftp.cpan.us ftp.cpan.north-america
+ 1000 carroll.cac.psu.edu.           128.118.2.96    ftp.cpan ftp.us.cpan ftp.north-america.cpan ftp.cpan.us ftp.cpan.north-america
+ 1000 cont1.njy.teleglobe.net.       207.45.221.24   ftp.cpan ftp.us.cpan ftp.north-america.cpan ftp.cpan.us ftp.cpan.north-america
+ 1000 fx.saintjoe.edu.               131.93.0.19     ftp.cpan ftp.us.cpan ftp.north-america.cpan ftp.cpan.us ftp.cpan.north-america
+ 1000 cpan.mirror.redwire.net.       64.186.240.117  ftp.cpan ftp.us.cpan ftp.north-america.cpan ftp.cpan.us ftp.cpan.north-america
+ 1000 theoryx5.uwinnipeg.ca.         142.132.65.108  www.cpan www.ca.cpan www.north-america.cpan
+ 1000 cpan.valueclick.com.           63.251.223.166  www.cpan www.us.cpan www.north-america.cpan
+ 1000 lux.valueclick.com.            216.34.207.102  www.cpan www.us.cpan www.north-america.cpan

@@ -2,16 +2,15 @@
 
 use lib 'lib';
 
+use GeoDNS;
 use Net::DNS;
 use Net::DNS::Nameserver;
-use Geo::IP;
 use strict;
 use warnings;
 use POSIX qw(setuid);
 use Getopt::Long;
 use Socket;
 
-use Countries qw(continent);
 
 my $VERSION = ('$Rev$' =~ m/(\d+)/)[0];
 my $HeadURL = ('$HeadURL$' =~ m!http:(//[^/]+.*)/pgeodns.pl!)[0];
@@ -26,75 +25,59 @@ GetOptions (\%opts,
 die "--interface [ip|hostname] required\n" unless $opts{interface};
 die "--user [user|uid] required\n" unless $opts{user};
 
-my $config;
-my $stats;
-$stats->{started} = time;
 
 sub log {
   warn @_;
 }
 
-sub get_ns_records {
-  my (@ans, @add);
-  my $base = $config->{base};
-  for my $ns (keys %{ $config->{ns} }) {
-    push @ans, Net::DNS::RR->new("$base 86400 IN NS $ns.");
-    push @add, Net::DNS::RR->new("$ns. 86400 IN A $config->{ns}->{$ns}")
-      if $config->{ns}->{$ns};
-  }
-  return (\@ans, \@add);
-}
+my $g = GeoDNS->new;
+my $stats;
+$stats->{started} = time;
 
-sub get_soa_record {
-    Net::DNS::RR->new
-	("$config->{base}. 3600 IN SOA $config->{primary_ns};
-          dns.perl.org. $config->{serial} 5400 5400 2419200 $config->{ttl}");
-}
 
 sub reply_handler {
-  check_config();
+  $g->check_config();
 
   my ($qname, $qclass, $qtype, $peerhost) = @_;
-  $qname = lc $qname;
+  $qname = lc $qname . ".";
 
-  warn "\n$peerhost | $qname | $qtype $qclass \n";
+  warn "$peerhost | $qname | $qtype $qclass \n";
 
   $stats->{qname}->{$qname}++;
   $stats->{qtype}->{$qtype}++;
   $stats->{queries}++;
 
-  my $base = $config->{base}; 
+  my $base = $g->find_base($qname);
+  my $config_base = $g->config($base) or return ("SERVFAIL");
 
   my (@ans, @auth, @add);
 
   # when are we supposed to add the SOA record and when the NS records here?
-  push @auth, @{ (get_ns_records)[0] };
-  push @add, @{ (get_ns_records)[1] };
+  push @auth, @{ ($g->get_ns_records($config_base))[0] };
+  push @add,  @{ ($g->get_ns_records($config_base))[1] };
 
-  if ($qname eq $base) {
-    # return NS
-
+  if ($qname eq $base and $qtype =~ m/^(NS|SOA)$/) {
     if ($qtype eq "SOA" or $qtype eq "ANY") {
-      push @ans, get_soa_record;
+      push @ans, $g->get_soa_record($config_base);
     }
     if ($qtype eq "NS" or $qtype eq "ANY") {
       # don't need the authority section for this request ...
       @auth = @add = ();
-      push @ans, @{ (get_ns_records)[0] };
-      push @add, @{ (get_ns_records)[1] };
+      push @ans, @{ ($g->get_ns_records($config_base))[0] };
+      push @add, @{ ($g->get_ns_records($config_base))[1] };
     }
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
 
-  if ($qname =~ m/(.*)\.\Q$base\E$/ and $config->{groups}->{$1}) {
-    my $qgroup = $1;
+  my ($group_host) = ($qname =~ m/(?:(.*)\.)?\Q$base\E$/);
+  if ($config_base->{groups}->{$group_host||''}) {
+    my $qgroup = $group_host || '';
 
     my @hosts;
     if ($qtype =~ m/^(A|ANY|TXT)$/) {
-      my (@groups) = pick_groups($peerhost, $qgroup);
-      warn "groups: ", join " / ", @groups;  
+      my (@groups) = $g->pick_groups($config_base, $peerhost, $qgroup);
       for my $group (@groups) { 
-	push @hosts, pick_hosts($group);
+	push @hosts, $g->pick_hosts($config_base, $group);
 	last if @hosts; 
 	  # add ">= 2" to force at least two hosts even if the second one won't be as local 
       }
@@ -104,25 +87,25 @@ sub reply_handler {
     
     if ($qtype eq "A" or $qtype eq "ANY") {
       for my $host (@hosts) {
-	push @ans, Net::DNS::RR->new("$qname. $config->{ttl} IN A $host->{ip}");
+	push @ans, Net::DNS::RR->new("$qname. $config_base->{ttl} IN A $host->{ip}");
       }
     } 
 
     if ($qtype eq "TXT" or $qtype eq "ANY") {
       for my $host (@hosts) {
-	push @ans, Net::DNS::RR->new("$qname. $config->{ttl} IN TXT '$host->{ip}/$host->{name}'");
+	push @ans, Net::DNS::RR->new("$qname. $config_base->{ttl} IN TXT '$host->{ip}/$host->{name}'");
       }
     } 
 
-    @auth = (get_soa_record) unless @ans;
+    @auth = ($g->get_soa_record($config_base)) unless @ans;
 
     # mark the answer as authoritive (by setting the 'aa' flag
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
 
   }
-  elsif ($config->{ns}->{$qname}) {
-    push @ans, grep { $_->address eq $config->{ns}->{$qname} } @{ (get_ns_records)[1] };
-    @add = grep { $_->address ne  $config->{ns}->{$qname} } @add;
+  elsif ($config_base->{ns}->{$qname}) {
+    push @ans, grep { $_->address eq $config_base->{ns}->{$qname} } @{ ($g->get_ns_records($config_base))[1] };
+    @add = grep { $_->address ne $config_base->{ns}->{$qname} } @add;
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
 
@@ -141,14 +124,12 @@ sub reply_handler {
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
   else {
-    @auth = get_soa_record;
+    @auth = $g->get_soa_record($config_base);
     warn "return cruft ...";
     return ("NXDOMAIN", [], \@auth, [], { aa => 1 });
   }
 
 }
-
-my $gi = Geo::IP->new(GEOIP_STANDARD);
 
 my $localaddr = $opts{interface};
 
@@ -175,7 +156,7 @@ $uid = getpwnam($uid) or die "could not lookup uid"
 
 setuid($uid) or die "could not setuid: $!";
 
-load_config();
+$g->load_config();
 
 if ($ns) {
   $ns->main_loop;
@@ -184,117 +165,7 @@ else {
   die "couldn't create nameserver object\n";
 }
 
-sub pick_groups {
-  my $client_ip = shift;
-  my $qgroup    = shift;
-  my $country   = lc($gi->country_code_by_addr($client_ip) || 'us');
-  my $continent = continent($country) || 'north-america';
 
-  my @candidates = ($country);
-  push @candidates, $continent
-    unless $continent eq "asia";
-  push @candidates, "";  
-
-  my @groups;
-
-  for my $candidate (@candidates) {
-    my $group = join ".", grep { $_ } $qgroup,$candidate;
-    push @groups, $group if $config->{groups}->{$group};
-  }
-		     
-  @groups;
-}
-
-sub pick_hosts {
-  my ($group) = shift;
-
-  return unless $config->{groups}->{$group}; 
-
-  my @answer;
-  my $max = 2;
-  $max = 1 unless scalar @{ $config->{groups}->{$group} };
-
-  my $loop = 0;
-
-  while (@answer < $max) {
-    last if ++$loop > 10;  # bad configuration could make us loop ...
-    my ($host) = ( @{ $config->{groups}->{$group} } )[rand scalar @{ $config->{groups}->{$group} }];
-    next if grep { $host eq $_->{name} } @answer;
-    warn "HOST CHOSEN: $host\n";
-    push @answer, ({ name => $host, ip => $config->{hosts}->{$host}->{ip} });
-  }
-
-  @answer;
-}
-
-sub check_config {
-  return unless time >= ($config->{last_config_check} + 30);
-  for my $file (@{$config->{files}}) {
-    load_config(), last 
-      if (stat($file->[0]))[9] != $file->[1]
-  }
-}
-
-sub load_config {
-
-  $config = {};
-  $config->{last_config_check} = time;
-  $config->{files} = [];
-
-  read_config('pgeodns.conf');
-
-  die "no ns configured in the config file"
-    unless $config->{ns};
-
-  $config->{serial} = 1 unless $config->{serial} and $config->{serial} =~ m/^\d+$/;
-  $config->{base} ||= 'ddns.develooper.com';
-  $config->{ttl}    = 180 unless $config->{ttl} and $config->{ttl} !~ m/\D/;
-
-  use Data::Dumper;
-  warn Data::Dumper->Dump([\$config], [qw(config)]);
-
-}
-
-sub read_config {
-  my $file = shift;
-
-  open my $fh, $file
-    or &log("Can't open config file: $file: $!");
-
-  push @{ $config->{files} }, [$file, (stat($file))[9]];
-
-  while (<$fh>) {
-    chomp;
-    s/^\s+//;
-    s/\s+$//;
-    next if /^\#/ or /^$/;
-
-    if (s/^ns\s+//) {
-      my ($name, $ip) = split /\s+/, $_;
-      $config->{ns}->{$name} = $ip;
-      $config->{primary_ns} = $name
-	unless $config->{primary_ns};
-    }
-    elsif (s/^(serial|base|ttl)\s+//) {
-      $config->{$1} = $_;
-    }
-    elsif (s/^include\s+//) {
-      read_config($_);
-    }
-    else {
-      s/^\s*10+\s+//;
-      my ($host, $ip, $groups) = split(/\s+/,$_,3);
-      $host = "$host." unless $host =~ m/\.$/;  # or should this be the other way around?
-      $config->{hosts}->{$host} = { ip => $ip };
-      for my $group (split /\s+/, $groups) {
-	$config->{groups}->{$group} = [] unless $config->{groups}->{$group};
-	push @{$config->{groups}->{$group}}, $host;
-      }
-    }
-    
-  }
-
-}
 
 
 
@@ -346,7 +217,7 @@ Send them to ask@develooper.com.
 
 =head1 COPYRIGHT
 
-Copyright 2004 Ask Bjoern Hansen, Develooper LLC
+Copyright 2004-2005 Ask Bjoern Hansen, Develooper LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

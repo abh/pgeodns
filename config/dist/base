@@ -1,0 +1,20 @@
+
+ns ns.ns1.develooper.com 127.0.0.1
+
+base geosearch.perl.org
+serial 3
+ns ns1.geosearch.perl.org
+ns ns2.geo.bitnames.com
+
+some.host  127.0.0.2    www
+another.host 127.0.0.3  us @
+
+base ddns.develooper.com
+
+ns ddns5.develooper.com
+ns ns2.geo.bitnames.com
+# ns.ns1.develooper.com 127.0.0.1
+
+serial 203
+
+include config/dist/dinamed.config.lb
