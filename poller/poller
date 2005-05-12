@@ -1,0 +1,60 @@
+#!/usr/bin/perl -w 
+use strict;
+use lib 'perl';
+
+use vars qw(@poller_modules);
+
+require 'poller.conf';
+
+my $opt_file = "conf/dist/dinamed.config.lb";
+
+sub logit {
+  print STDERR scalar localtime, " $$ [poller] ", join(" ", @_), "\n";
+}
+
+logit "starting";
+
+$| = 1;
+
+my %modules;
+
+for my $mod (@poller_modules) {
+  $modules{$mod} = eval "use Poller::$mod; new Poller::$mod";
+  warn $@ if $@;
+}
+
+my $time_started = time;
+
+while (1) {
+  my @to_convert;
+  for my $mod (values %modules) {
+    push @to_convert, $mod if $mod->check_data or !$mod->lb_list;
+  }
+  for my $mod (@to_convert) {
+    $mod->convert;
+  }
+
+  if (@to_convert) {
+    my $tmp_file = "$opt_file.$$.tmp";
+    open CONF, ">$tmp_file" or die "Could not open $tmp_file: $!";
+    for my $mod (values %modules) {
+      print CONF join("\n", $mod->lb_list),"\n";
+    }
+    close CONF or die "Could not close $tmp_file: $!";
+    rename $tmp_file, $opt_file or die "Could not rename $tmp_file to $opt_file: $!";
+    kill 1, `cat dinamed.53.pid`;
+  }
+
+  logit "waiting";
+  sleep 350;
+}
+
+
+
+
+__END__
+# "$weight $host $ip $aliases{$host}\n";
+
+1200 miette.develooper.com. 64.81.84.162    ftp.cpan  m
+1100 lux.develooper.com.    216.246.96.121  ftp.cpan  l
+1400 tmtowtdi.perl.org.     209.85.3.25     ftp.cpan  t
