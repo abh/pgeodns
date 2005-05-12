@@ -4,12 +4,22 @@ use Net::DNS::RR;
 use Countries qw(continent);
 use Geo::IP;
 
+my $VERSION = ('$Rev: 347 $' =~ m/(\d+)/)[0];
+my $HeadURL = ('$HeadURL: http://svn.develooper.com/repos/pgeodns/trunk/pgeodns.pl $' =~ m!http:(//[^/]+.*)/pgeodns.pl!)[0];
+
 my $config;
+my $stats;
+$stats->{started} = time;
 my $gi = Geo::IP->new(GEOIP_STANDARD);
 
 sub new {
   my $class = shift;
-  bless {}, $class;
+  my %args  = @_;
+  bless \%args, $class;
+}
+
+sub log {
+  warn @_;
 }
 
 sub config {
@@ -17,6 +27,105 @@ sub config {
   return $config unless $base;
   return $config->{bases}->{$base} || {};
 }
+
+sub reply_handler {
+  my $self = shift;
+
+  $self->check_config();
+
+  my ($qname, $qclass, $qtype, $peerhost) = @_;
+  $qname = lc $qname . ".";
+
+  warn "$peerhost | $qname | $qtype $qclass \n";
+
+  $stats->{qname}->{$qname}++;
+  $stats->{qtype}->{$qtype}++;
+  $stats->{queries}++;
+
+  my $base = $self->find_base($qname);
+  my $config_base = $self->config($base) or return ("SERVFAIL");
+
+  my (@ans, @auth, @add);
+
+  # when are we supposed to add the SOA record and when the NS records here?
+  push @auth, @{ ($self->get_ns_records($config_base))[0] };
+  push @add,  @{ ($self->get_ns_records($config_base))[1] };
+
+  if ($qname eq $base and $qtype =~ m/^(NS|SOA)$/) {
+    if ($qtype eq "SOA" or $qtype eq "ANY") {
+      push @ans, $self->get_soa_record($config_base);
+    }
+    if ($qtype eq "NS" or $qtype eq "ANY") {
+      # don't need the authority section for this request ...
+      @auth = @add = ();
+      push @ans, @{ ($self->get_ns_records($config_base))[0] };
+      push @add, @{ ($self->get_ns_records($config_base))[1] };
+    }
+    return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
+  }
+
+  my ($group_host) = ($qname =~ m/(?:(.*)\.)?\Q$base\E$/);
+  if ($config_base->{groups}->{$group_host||''}) {
+    my $qgroup = $group_host || '';
+
+    my @hosts;
+    if ($qtype =~ m/^(A|ANY|TXT)$/) {
+      my (@groups) = $self->pick_groups($config_base, $peerhost, $qgroup);
+      for my $group (@groups) { 
+	push @hosts, $self->pick_hosts($config_base, $group);
+	last if @hosts; 
+	  # add ">= 2" to force at least two hosts even if the second one won't be as local 
+      }
+      # only return two hosts
+      # @hosts = (@hosts[0,1]) if @hosts > 2;
+    }
+    
+    if ($qtype eq "A" or $qtype eq "ANY") {
+      for my $host (@hosts) {
+	push @ans, Net::DNS::RR->new("$qname. $config_base->{ttl} IN A $host->{ip}");
+      }
+    } 
+
+    if ($qtype eq "TXT" or $qtype eq "ANY") {
+      for my $host (@hosts) {
+	push @ans, Net::DNS::RR->new("$qname. $config_base->{ttl} IN TXT '$host->{ip}/$host->{name}'");
+      }
+    } 
+
+    @auth = ($self->get_soa_record($config_base)) unless @ans;
+
+    # mark the answer as authoritive (by setting the 'aa' flag
+    return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
+
+  }
+  elsif ($config_base->{ns}->{$qname}) {
+    push @ans, grep { $_->address eq $config_base->{ns}->{$qname} } @{ ($self->get_ns_records($config_base))[1] };
+    @add = grep { $_->address ne $config_base->{ns}->{$qname} } @add;
+    return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
+  }
+
+  elsif ($qname =~ m/^status\.\Q$base\E$/) {
+    my $uptime = time - $stats->{started} || 1;
+    # TODO: convert to 2w3d6h format ...
+    my $status = sprintf "%s, upt: %i, q: %i, %.2f/qps",
+      $self->{interface}, $uptime, $stats->{queries}, $stats->{queries}/$uptime;
+    warn Data::Dumper->Dump([\$stats], [qw(stats)]);
+    push @ans, Net::DNS::RR->new("$qname. 1 IN TXT '$status'") if $qtype eq "TXT" or $qtype eq "ANY";
+    return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
+  }
+  elsif ($qname =~ m/^version\.\Q$base\E$/) {
+    my $version = "$self->{interface}, Rev #$VERSION $HeadURL";
+    push @ans, Net::DNS::RR->new("$qname. 1 IN TXT '$version'") if $qtype eq "TXT" or $qtype eq "ANY";
+    return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
+  }
+  else {
+    @auth = $self->get_soa_record($config_base);
+    warn "return cruft ...";
+    return ("NXDOMAIN", [], \@auth, [], { aa => 1 });
+  }
+
+}
+
 
 sub get_ns_records {
   my ($self, $config_base) = @_;

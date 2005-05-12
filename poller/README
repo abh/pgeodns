@@ -1,0 +1,5 @@
+This is the Very Old hack that's generating the configuration for ddns.develooper.com
+
+There are hard coded paths and other evils.  Don't worry about it; you
+shouldn't need this code. "cd .." now.  :-)
+
