@@ -1,6 +1,28 @@
+
 ns ns1.ddns.develooper.com 127.0.0.1
 ns ddns5.develooper.com
 
 ttl 600
 serial 101
+
+# @ is the default/empty "group name"
+base example.com
+# example.com hosts
+host1   192.0.2.1   us north-america @
+host2   192.0.2.2   dk europe
+# ftp.example.com hosts
+#  - us/canada, north america and the default "ftp.example.com"
+ftphost 192.0.2.3   ftp.ca ftp.north-america ftp
+ftphost 192.0.2.4   ftp.us ftp.north-america ftp
+# - ftp.example.com for only denmark and the rest of europe 
+ftphost 192.0.2.5   ftp.dk ftp.europe
+
+
+#base example.net
+#ns ns1.example.org
+#ns ns2.example.org
+#ttl 300
+#serial 2000  
+#include config/example.net
+
 
