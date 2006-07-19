@@ -3,6 +3,7 @@ use strict;
 use Net::DNS::RR;
 use Countries qw(continent);
 use Geo::IP;
+use List::Util qw/max/;
 
 my $VERSION = ('$Rev: 347 $' =~ m/(\d+)/)[0];
 my $HeadURL = ('$HeadURL: http://svn.develooper.com/repos/pgeodns/trunk/pgeodns.pl $' =~ m!http:(//[^/]+.*)/pgeodns.pl!)[0];
@@ -196,7 +197,7 @@ sub find_base {
   # should we cache these?
   my ($self, $qname) = @_;
   my $base = "";
-  map { $base = $_ if $qname =~ m/\Q$_\E$/ and length $_ > length $base } keys %{ $config->{bases} };
+  map { $base = $_ if $qname =~ m/(?:^|\.)\Q$_\E$/ and length $_ > length $base } keys %{ $config->{bases} };
   $base;
 }
 
@@ -211,8 +212,8 @@ sub load_config {
 
   warn Data::Dumper->Dump([\$config], [qw(config)]);
 
-  # TODO: make the default serial the timestamp of the newest config file. 
-  $config->{serial} = 1 unless $config->{serial} and $config->{serial} =~ m/^\d+$/;
+  # the default serial is timestamp of the newest config file. 
+  $config->{serial} = max map {$_->[1]} @{ $config->{files} } unless $config->{serial} and $config->{serial} =~ m/^\d+$/;
   $config->{ttl}    = 180 unless $config->{ttl} and $config->{ttl} !~ m/\D/;
 
   for my $base (keys %{$config->{bases}}) {
@@ -235,6 +236,11 @@ sub load_config {
 sub read_config {
   my $file = shift;
 
+  if (grep {$_->[0] eq $file} @{ $config->{files} }) {
+    warn "Skipping already included '$file'!";
+    return;
+  }
+
   open my $fh, $file
     or &log("Can't open config file: $file: $!");
 
@@ -246,9 +252,9 @@ sub read_config {
     s/\s+$//;
     next if /^\#/ or /^$/;
 
-    if (s/^(base)\s+//) {
+    if (s/^base\s+//) {
       $_ .= '.' unless m/\.$/;
-      $config->{$1} = $_;
+      $config->{base} = $_;
       $config->{bases}->{$_} ||= { base => $_ };
       next;
     }
