@@ -88,6 +88,7 @@ my %continent_country = (
       'Kazakhstan',
       'North Korea',
       'South Korea',
+      'Republic of Korea',         
       'Kuwait',
       'Kyrgyzstan',
       'Laos',
@@ -352,6 +353,7 @@ km     Comoros
 kn     Saint Kitts &amp; Nevis Anguilla
 kp     North Korea
 kr     South Korea
+kr     Republic of Korea
 kw     Kuwait
 ky     Cayman Islands
 kz     Kazakhstan

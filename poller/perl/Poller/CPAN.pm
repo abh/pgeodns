@@ -27,7 +27,8 @@ sub convert {
     next unless m/\S/;
     chomp;
     my ($url, $host, $bandwidth, $contact, $country) = map { $_ =~ s/\s*$//; $_ } split /\t/, $_;
-    next unless $url =~ m!ftp://[^/]+/pub/CPAN/?\b!;
+    next unless $url =~ m!ftp://([^/]+)/pub/CPAN/?\b!;
+    $host = $1;
     #print "$host / $bandwidth / $country\n";
     my $ip = join ".", unpack('C4',((gethostbyname($host))[4])[0]); 
     
