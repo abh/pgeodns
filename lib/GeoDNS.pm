@@ -233,13 +233,16 @@ sub load_config {
 
 }
 
+my @config_file_stack;
+
 sub read_config {
   my $file = shift;
 
-  if (grep {$_->[0] eq $file} @{ $config->{files} }) {
-    warn "Skipping already included '$file'!";
-    return;
+  if (grep {$_ eq $file} @config_file_stack) {
+    die "Oops, recursive inclusion of $file - parent(s): ", join ", ", @config_file_stack;
   }
+
+  push @config_file_stack, $file;
 
   open my $fh, $file
     or &log("Can't open config file: $file: $!");
@@ -303,6 +306,7 @@ sub read_config {
       }
     }
   }
+  pop @config_file_stack;
 }
 
 sub check_config {
