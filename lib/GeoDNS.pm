@@ -84,13 +84,23 @@ sub reply_handler {
     
     if ($qtype eq "A" or $qtype eq "ANY") {
       for my $host (@hosts) {
-	push @ans, Net::DNS::RR->new("$qname. $config_base->{ttl} IN A $host->{ip}");
+          push @ans, Net::DNS::RR->new(
+                                       name => $qname,
+                                       ttl => $config_base->{ttl},
+                                       type => "A",
+                                       address => $host->{ip}
+                                       );
       }
     } 
 
     if ($qtype eq "TXT" or $qtype eq "ANY") {
       for my $host (@hosts) {
-	push @ans, Net::DNS::RR->new("$qname. $config_base->{ttl} IN TXT '$host->{ip}/$host->{name}'");
+          push @ans, Net::DNS::RR->new(
+                                       name => $qname,
+                                       ttl => $config_base->{ttl},
+                                       type => "TXT",
+                                       txtdata => "$host->{ip}/$host->{name}"
+                                       );
       }
     } 
 
@@ -271,6 +281,7 @@ sub read_config {
     unless ($config->{base}) {
       if (s/^ns\s+//) {
 	my ($name, $ip) = split /\s+/, $_;
+        $name .= "." unless $name =~ m/\.$/;
 	$config->{ns}->{$name} = $ip;
 	$config->{primary_ns} = $name
 	  unless $config->{primary_ns};
@@ -289,6 +300,8 @@ sub read_config {
 
     if (s/^ns\s+//) {
       my ($name, $ip) = split /\s+/, $_;
+      $name .= "." unless $name =~ m/\.$/;  # TODO: refactor this so these lines aren't duplicated
+                                            # with the ones above
       $config_base->{ns}->{$name} = $ip;
       $config_base->{primary_ns} = $name
 	unless $config_base->{primary_ns};
@@ -299,7 +312,7 @@ sub read_config {
     else {
       s/^\s*10+\s+//;
       my ($host, $ip, $groups) = split(/\s+/,$_,3);
-      $host = "$host." unless $host =~ m/\.$/;  # or should this be the other way around?
+      $host = "$host." unless $host =~ m/\.$/;
       $config_base->{hosts}->{$host} = { ip => $ip };
       for my $group_name (split /\s+/, $groups) {
 	$group_name = '' if $group_name eq '@';
