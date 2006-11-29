@@ -42,7 +42,7 @@ ok(my $groups = [$g->pick_groups($config_base, '127.0.0.1', '')], 'pick_groups')
 is_deeply($groups, ['us', '']);
 
 
-use Data::Dumper;
-warn Data::Dumper->Dump([\$groups], [qw(groups)]);
+#use Data::Dumper;
+#warn Data::Dumper->Dump([\$groups], [qw(groups)]);
 
 

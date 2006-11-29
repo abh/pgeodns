@@ -4,6 +4,7 @@ use Net::DNS::RR;
 use Countries qw(continent);
 use Geo::IP;
 use List::Util qw/max/;
+use Carp;
 
 my $VERSION = ('$Rev: 347 $' =~ m/(\d+)/)[0];
 my $HeadURL = ('$HeadURL: http://svn.develooper.com/repos/pgeodns/trunk/pgeodns.pl $' =~ m!http:(//[^/]+.*)/pgeodns.pl!)[0];
@@ -20,7 +21,7 @@ sub new {
 }
 
 sub log {
-  warn @_;
+  carp @_;
 }
 
 sub config {
@@ -110,7 +111,7 @@ sub reply_handler {
     # TODO: convert to 2w3d6h format ...
     my $status = sprintf "%s, upt: %i, q: %i, %.2f/qps",
       $self->{interface}, $uptime, $stats->{queries}, $stats->{queries}/$uptime;
-    warn Data::Dumper->Dump([\$stats], [qw(stats)]);
+      #warn Data::Dumper->Dump([\$stats], [qw(stats)]);
     push @ans, Net::DNS::RR->new("$qname. 1 IN TXT '$status'") if $qtype eq "TXT" or $qtype eq "ANY";
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
@@ -210,7 +211,7 @@ sub load_config {
 
   read_config( shift || 'pgeodns.conf' );
 
-  warn Data::Dumper->Dump([\$config], [qw(config)]);
+  # warn Data::Dumper->Dump([\$config], [qw(config)]);
 
   # the default serial is timestamp of the newest config file. 
   $config->{serial} = max map {$_->[1]} @{ $config->{files} } unless $config->{serial} and $config->{serial} =~ m/^\d+$/;
@@ -228,9 +229,10 @@ sub load_config {
       unless $config_base->{ns};
   }
 
-  use Data::Dumper;
-  warn Data::Dumper->Dump([\$config], [qw(config)]);
+  # use Data::Dumper;
+  # warn Data::Dumper->Dump([\$config], [qw(config)]);
 
+  1;
 }
 
 my @config_file_stack;
