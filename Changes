@@ -1,4 +1,9 @@
 
-See the SVN history for now :-)
 
-We'll track "user visible changes" here when we start making proper releases some day.
+   - read .json data files (to bulk save/load configuration)
+   - support __END__ to stop reading a configuration file
+   - max_hosts configuration (should probably be renamed?)
+   - Fix bug that disallowed setting default serial/ttl/primary_ns variables
+
+  r347 - 
+     - see SVN history for history prior to this. :-)

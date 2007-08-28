@@ -22,7 +22,8 @@ ftphost 192.0.2.5   ftp.dk ftp.europe
 #ns ns1.example.org
 #ns ns2.example.org
 #ttl 300
-#serial 2000  
+#serial 2000 
+#max_hosts 3  
 #include config/example.net
 
 

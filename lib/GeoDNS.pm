@@ -5,8 +5,9 @@ use Countries qw(continent);
 use Geo::IP;
 use List::Util qw/max/;
 use Carp;
+use JSON qw();
 
-my $VERSION = ('$Rev: 347 $' =~ m/(\d+)/)[0];
+our $VERSION = ('$Rev: 347 $' =~ m/(\d+)/)[0];
 my $HeadURL = ('$HeadURL: http://svn.develooper.com/repos/pgeodns/trunk/pgeodns.pl $' =~ m!http:(//[^/]+.*)/pgeodns.pl!)[0];
 
 my $config;
@@ -18,10 +19,6 @@ sub new {
   my $class = shift;
   my %args  = @_;
   bless \%args, $class;
-}
-
-sub log {
-  carp @_;
 }
 
 sub config {
@@ -114,7 +111,7 @@ sub reply_handler {
     push @ans, grep { $_->address eq $config_base->{ns}->{$qname} } @{ ($self->get_ns_records($config_base))[1] };
     @add = grep { $_->address ne $config_base->{ns}->{$qname} } @add;
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
-  }
+ }
 
   elsif ($qname =~ m/^status\.\Q$base\E$/) {
     my $uptime = time - $stats->{started} || 1;
@@ -155,7 +152,7 @@ sub get_soa_record {
   my ($self, $config_base) = @_;
     Net::DNS::RR->new
 	("$config_base->{base}. 3600 IN SOA $config_base->{primary_ns};
-          dns.perl.org. $config_base->{serial} 5400 5400 2419200 $config_base->{ttl}");
+          support.bitnames.com. $config_base->{serial} 5400 5400 2419200 $config_base->{ttl}");
 }
 
 sub pick_groups {
@@ -185,19 +182,22 @@ sub pick_groups {
 sub pick_hosts {
   my ($self, $config_base, $group) = @_;
 
-  return unless $config_base->{groups}->{$group}; 
+  return unless $config_base->{groups}->{$group} and $config_base->{groups}->{$group}->{servers}; 
 
   my @answer;
-  my $max = 2;
-  $max = 1 unless scalar @{ $config_base->{groups}->{$group} };
+  my $max = $config_base->{max_hosts} || 2;
+  $max = 1 unless scalar @{ $config_base->{groups}->{$group}->{servers} };
 
   my $loop = 0;
 
   while (@answer < $max) {
     last if ++$loop > 10;  # bad configuration could make us loop ...
-    my ($host) = ( @{ $config_base->{groups}->{$group} } )[rand scalar @{ $config_base->{groups}->{$group} }];
+    my ($host) = ( @{ $config_base->{groups}->{$group}->{servers} }
+                 )[rand scalar @{ $config_base->{groups}->{$group}->{servers} }];
+    ($host, my $priority) = @$host;
     next if grep { $host eq $_->{name} } @answer;
-    push @answer, ({ name => $host, ip => $config_base->{hosts}->{$host}->{ip} });
+    my $ip = $host =~ m/^\d{1,3}(.\d{1,3}){3}$/ ? $host : $config_base->{hosts}->{$host}->{ip};
+    push @answer, ({ name => $host, ip => $ip });
   }
 
   @answer;
@@ -220,6 +220,8 @@ sub load_config {
   $config->{files} = [];
 
   read_config( shift || 'pgeodns.conf' );
+
+  delete $config->{base};
 
   # warn Data::Dumper->Dump([\$config], [qw(config)]);
 
@@ -254,10 +256,10 @@ sub read_config {
     die "Oops, recursive inclusion of $file - parent(s): ", join ", ", @config_file_stack;
   }
 
-  push @config_file_stack, $file;
-
   open my $fh, $file
-    or &log("Can't open config file: $file: $!");
+    or warn "Can't open config file: $file: $!\n" and return;
+
+  push @config_file_stack, $file;
 
   push @{ $config->{files} }, [$file, (stat($file))[9]];
 
@@ -266,11 +268,20 @@ sub read_config {
     s/^\s+//;
     s/\s+$//;
     next if /^\#/ or /^$/;
+    last if /^__END__$/;
 
     if (s/^base\s+//) {
-      $_ .= '.' unless m/\.$/;
-      $config->{base} = $_;
-      $config->{bases}->{$_} ||= { base => $_ };
+      my ($base_name, $json_file) = split /\s+/, $_;
+      $base_name .= '.' unless $base_name =~ m/\.$/;
+      $config->{base} = $base_name;
+      if ($json_file) {
+          open my $json_fh, $json_file or warn "Could not open $json_file: $!\n" and next;
+          push @{ $config->{files} }, [$json_file, (stat($json_file))[9]];
+          my $json = eval { local $/ = undef; <$json_fh> };
+          close $json_fh;
+          $config->{bases}->{$base_name} = JSON::jsonToObj($json);
+      }
+      $config->{bases}->{$base_name}->{base} ||= $base_name;
       next;
     }
     elsif (s/^include\s+//) {
@@ -289,6 +300,7 @@ sub read_config {
       }
       elsif (s/^(serial|ttl|primary_ns)\s+//) {
 	$config->{$1} = $_;
+        next;
       }
     }
 
@@ -306,18 +318,19 @@ sub read_config {
       $config_base->{primary_ns} = $name
 	unless $config_base->{primary_ns};
     }
-    elsif (s/^(serial|ttl|primary_ns)\s+//) {
+    elsif (s/^(serial|ttl|primary_ns|max_hosts)\s+//) {
       $config_base->{$1} = $_;
     }
     else {
       s/^\s*10+\s+//;
       my ($host, $ip, $groups) = split(/\s+/,$_,3);
+      die "Bad configuration line: [$_]\n" unless $groups; 
       $host = "$host." unless $host =~ m/\.$/;
       $config_base->{hosts}->{$host} = { ip => $ip };
       for my $group_name (split /\s+/, $groups) {
 	$group_name = '' if $group_name eq '@';
-	$config_base->{groups}->{$group_name} ||= [];
-	push @{$config_base->{groups}->{$group_name}}, $host;
+	$config_base->{groups}->{$group_name}->{servers} ||= [];
+	push @{$config_base->{groups}->{$group_name}->{servers}}, [ $host, 1 ];
       }
     }
   }
