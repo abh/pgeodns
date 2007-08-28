@@ -5,7 +5,7 @@ use Net::DNS::RR;
 use Countries qw(continent);
 use Geo::IP;
 use List::Util qw/max/;
-use Carp;
+use Carp qw(carp croak);
 use JSON qw();
 use Data::Dumper;
 
@@ -29,7 +29,7 @@ sub new {
 sub config {
   my ($self, $base) = @_;
   return $self->{config} unless $base;
-  return $self->{config}->{bases}->{$base} || {};
+  return $self->{config}->{bases}->{$base}; # returns undef on "invalid" base
 }
 
 sub reply_handler {
@@ -220,7 +220,7 @@ sub find_base {
 
 sub load_config {
   my $self     = shift;
-  my $filename = shift || 'pgeodns.conf';
+  my $filename = shift or croak "load_config requires a filename";
 
   my $config = {};
   $config->{last_config_check} = time;
@@ -357,8 +357,9 @@ sub _read_config {
 sub check_config {
   my $self = shift;
   return unless time >= ($self->config->{last_config_check} + 30);
+  my ($first_file) = (@{$self->config->{files}})[0];
   for my $file (@{$self->config->{files}}) {
-    do { load_config(); last }
+    do { load_config($first_file); last }
       if (stat($file->[0]))[9] != $file->[1]
   }
   return 1;
@@ -393,7 +394,9 @@ Instantiates a new GeoDNS object.
 
 =item load_config($file_name)
 
-Loads the specified configuration file (defaults to "pgeodns.conf")
+Loads the specified configuration file (usually pgeodns.conf).
+Supplemental files are loaded via "include" statements or implicit
+JSON file loads from the "base" statement.
 
 =item config
 

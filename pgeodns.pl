@@ -54,7 +54,7 @@ $uid = getpwnam($uid) or die "could not lookup uid"
 
 setuid($uid) or die "could not setuid: $!";
 
-$g->load_config();
+$g->load_config('pgeodns.conf');
 
 if ($ns) {
   $ns->main_loop;
