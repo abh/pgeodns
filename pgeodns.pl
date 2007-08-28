@@ -63,8 +63,6 @@ else {
 
 
 
-
-
 __END__
 
 =pod
@@ -100,7 +98,7 @@ Print even more status output.
 =head1 CONFIGURATION
 
 pgeodns.conf in the current directory.  Review it and the included
-samples in conf/* until it gets documented. :-)
+samples in config/* until it gets documented. :-)
 
     
 =head1 REFERENCES
@@ -113,7 +111,7 @@ Send them to ask@develooper.com.
 
 =head1 COPYRIGHT
 
-Copyright 2004-2005 Ask Bjoern Hansen, Develooper LLC
+Copyright 2004-2007 Ask Bjoern Hansen, Develooper LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
