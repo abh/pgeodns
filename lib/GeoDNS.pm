@@ -349,7 +349,7 @@ sub check_config {
 1;
 
 
-__POD__
+__END__
 
 =head1 NAME
 

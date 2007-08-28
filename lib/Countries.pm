@@ -33,41 +33,6 @@ sub continent {
 #
 #}
 
-__POD__
-
-=head1 NAME
-
-GeoDNS::Countries - Map country codes to continents
- 
-=head1 SYNOPSIS
-
-   use GeoDNS::Countries qw(continent);
-
-   my $continent = continent("dk");
-   print $continent;  # "europe"
-
-=head1 DESCRIPTION
-
-=over 4
-
-=item continent( $country_code )
-
-Takes a country code and returns a continent name.  The "continents" are
-
-   africa
-   antarctica
-   asia
-   europe
-   north-america
-   south-america
-   oceania
-
-=back
-
-=head1 BUGS
-
-The mapping could surely be improved and if nothing else then usefully be sub-divided further.
-
 
 __DATA__
 a1,north-america,"Anonymous Proxy"
@@ -315,3 +280,40 @@ za,africa,South Africa
 zm,africa,Zambia
 zr,africa,Zaire
 zw,africa,Zimbabwe
+
+
+__END__
+
+=head1 NAME
+
+GeoDNS::Countries - Map country codes to continents
+ 
+=head1 SYNOPSIS
+
+   use GeoDNS::Countries qw(continent);
+
+   my $continent = continent("dk");
+   print $continent;  # "europe"
+
+=head1 DESCRIPTION
+
+=over 4
+
+=item continent( $country_code )
+
+Takes a country code and returns a continent name.  The "continents" are
+
+   africa
+   antarctica
+   asia
+   europe
+   north-america
+   south-america
+   oceania
+
+=back
+
+=head1 BUGS
+
+The mapping could surely be improved and if nothing else then usefully be sub-divided further.
+
