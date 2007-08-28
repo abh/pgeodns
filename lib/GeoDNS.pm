@@ -9,7 +9,8 @@ use JSON qw();
 
 our $VERSION  = "1.1";
 our $REVISION = ('$Rev: 347 $' =~ m/(\d+)/)[0];
-my $HeadURL = ('$HeadURL: http://svn.develooper.com/repos/pgeodns/trunk/pgeodns.pl $' =~ m!http:(//[^/]+.*)/pgeodns.pl!)[0];
+my $HeadURL = ('$HeadURL: http://svn.develooper.com/repos/pgeodns/trunk/pgeodns.pl $'
+                 =~ m!http:(//[^/]+.*)/pgeodns.pl!)[0];
 
 my $config;
 my $stats;
@@ -233,6 +234,12 @@ sub load_config {
   for my $base (keys %{$config->{bases}}) {
     my $config_base = $config->{bases}->{$base};
 
+    # for the old style configs we do this when the first NS is set,
+    # but we don't have that cleanup for "pure" json configs
+    unless ($config_base->{primary_ns}) {
+        ($config_base->{primary_ns}) = keys %{$config_base->{ns}} if $config_base->{ns};
+    }
+
     for my $f (qw(ns primary_ns ttl serial)) {
       $config_base->{$f} = $config->{$f} or die "default $f needed but not set"
 	unless $config_base->{$f};
@@ -282,7 +289,7 @@ sub read_config {
           close $json_fh;
           $config->{bases}->{$base_name} = JSON::jsonToObj($json);
       }
-      $config->{bases}->{$base_name}->{base} ||= $base_name;
+      $config->{bases}->{$base_name}->{base} = $base_name;
       next;
     }
     elsif (s/^include\s+//) {
