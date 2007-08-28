@@ -6,6 +6,7 @@ use Geo::IP;
 use List::Util qw/max/;
 use Carp;
 use JSON qw();
+use Data::Dumper;
 
 our $VERSION  = "1.1";
 our $REVISION = ('$Rev: 347 $' =~ m/(\d+)/)[0];
@@ -18,7 +19,7 @@ sub new {
   my $class = shift;
   my %args  = @_;
 
-  $args{config};
+  $args{config} = {};
   $args{stats}->{started} = time;
 
   bless \%args, $class;
@@ -38,7 +39,7 @@ sub reply_handler {
   my ($qname, $qclass, $qtype, $peerhost) = @_;
   $qname = lc $qname . ".";
 
-  warn "$peerhost | $qname | $qtype $qclass \n";
+  # warn "$peerhost | $qname | $qtype $qclass \n";
 
   my $stats = $self->{stats};
 
@@ -123,7 +124,7 @@ sub reply_handler {
     # TODO: convert to 2w3d6h format ...
     my $status = sprintf "%s, upt: %i, q: %i, %.2f/qps",
       $self->{interface}, $uptime, $stats->{queries}, $stats->{queries}/$uptime;
-      #warn Data::Dumper->Dump([\$stats], [qw(stats)]);
+      warn Data::Dumper->Dump([\$stats], [qw(stats)]);
     push @ans, Net::DNS::RR->new("$qname. 1 IN TXT '$status'") if $qtype eq "TXT" or $qtype eq "ANY";
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
@@ -386,11 +387,21 @@ Instantiates a new GeoDNS object.
 
 Loads the c
 
+=item config
+
+Returns the current configuration hash for the object instance.
+
 =item check_config
 
 Checks if any of the configuration files have changed and initiates a
 reload if any file has changed since the last load.  It skips checking
 unless it's been more than 30 seconds since the last check.
+
+Called automatically from the reply_handler.
+
+=item find_base($name)
+
+Given a domain name, returns the longest matching configured "base".
 
 =back
 
