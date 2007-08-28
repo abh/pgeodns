@@ -47,8 +47,8 @@ sub reply_handler {
   $stats->{qtype}->{$qtype}++;
   $stats->{queries}++;
 
-  my $base = $self->find_base($qname);
-  my $config_base = $self->config($base) or return ("SERVFAIL");
+  my $base = $self->find_base($qname) or return ("SERVFAIL");
+  my $config_base = $self->config($base);
 
   my (@ans, @auth, @add);
 
