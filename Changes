@@ -4,6 +4,7 @@
    - support __END__ to stop reading a configuration file
    - max_hosts configuration (should probably be renamed?)
    - Fix bug that disallowed setting default serial/ttl/primary_ns variables
+   - remove local copy of Net::DNS::Nameserver
 
   r347 - 
      - see SVN history for history prior to this. :-)
