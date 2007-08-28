@@ -1,7 +1,9 @@
 package Countries;
-use base qw(Exporter);
-@EXPORT_OK = qw(continent);
 use strict;
+use warnings;
+use base qw(Exporter);
+
+our @EXPORT_OK = qw(continent);
 
 my %country;
 
