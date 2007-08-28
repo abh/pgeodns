@@ -11,7 +11,7 @@ is(my @ans = $g->pick_hosts($config_base, "ftp.cpan"), 2, "two answers returned 
 
 my $first;
 foreach my $res (@ans) {
-  ok(grep(/^$res->{name}/, @{$config_base->{groups}->{"ftp.cpan"}}), "host belongs to the group");
+  ok(grep(/^$res->{name}/, map { $_->[0] } @{$config_base->{groups}->{"ftp.cpan"}->{servers}}), "host belongs to the group");
   is($res->{ip}, $config_base->{hosts}->{$res->{name}}->{ip}, "correct IP returned for host");
 
   if ($first) {

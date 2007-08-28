@@ -19,26 +19,25 @@ ok($groups = [$g->pick_groups($config_base, '61.121.253.84', 'ftp.cpan')], 'pick
 is_deeply($groups, ['ftp.cpan']);
 
 
-my $config_base = $g->config('example.net.');
+$config_base = $g->config('example.net.');
 
 # .us
-ok(my $groups = [$g->pick_groups($config_base, '64.81.84.162', '')], 'pick_groups');
+ok($groups = [$g->pick_groups($config_base, '64.81.84.162', '')], 'pick_groups');
 is_deeply($groups, ['us', 'north-america', '']);
 
 # .br
-ok(my $groups = [$g->pick_groups($config_base, '200.189.169.135', '')], 'pick_groups');
+ok($groups = [$g->pick_groups($config_base, '200.189.169.135', '')], 'pick_groups');
 is_deeply($groups, ['']);
 
 
-
-my $config_base = $g->config('geosearch.perl.org.');
+$config_base = $g->config('geosearch.perl.org.');
 
 # .us
-ok(my $groups = [$g->pick_groups($config_base, '64.81.84.162', '')], 'pick_groups');
+ok($groups = [$g->pick_groups($config_base, '64.81.84.162', '')], 'pick_groups');
 is_deeply($groups, ['us', '']);
 
 # localhost
-ok(my $groups = [$g->pick_groups($config_base, '127.0.0.1', '')], 'pick_groups');
+ok($groups = [$g->pick_groups($config_base, '127.0.0.1', '')], 'pick_groups');
 is_deeply($groups, ['us', '']);
 
 
