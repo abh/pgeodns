@@ -9,10 +9,10 @@ use Carp;
 use JSON qw();
 use Data::Dumper;
 
-our $VERSION  = "1.1";
-our $REVISION = ('$Rev: 347 $' =~ m/(\d+)/)[0];
+our $VERSION  = '1.1';
+our $REVISION = ('$Rev: 347 $' =~ m/(\d+)/x)[0];
 my $HeadURL = ('$HeadURL: http://svn.develooper.com/repos/pgeodns/trunk/pgeodns.pl $'
-                 =~ m!http:(//[^/]+.*)/pgeodns.pl!)[0];
+                 =~ m!http:(//[^/]+.*)/pgeodns.pl!x)[0];
 
 my $gi = Geo::IP->new(GEOIP_STANDARD);
 
@@ -38,7 +38,7 @@ sub reply_handler {
   $self->check_config();
 
   my ($qname, $qclass, $qtype, $peerhost) = @_;
-  $qname = lc $qname . ".";
+  $qname = lc $qname . '.';
 
   # warn "$peerhost | $qname | $qtype $qclass \n";
 
@@ -48,7 +48,7 @@ sub reply_handler {
   $stats->{qtype}->{$qtype}++;
   $stats->{queries}++;
 
-  my $base = $self->find_base($qname) or return ("SERVFAIL");
+  my $base = $self->find_base($qname) or return 'SERVFAIL';
   my $config_base = $self->config($base);
 
   my (@ans, @auth, @add);
@@ -57,11 +57,11 @@ sub reply_handler {
   push @auth, @{ ($self->get_ns_records($config_base))[0] };
   push @add,  @{ ($self->get_ns_records($config_base))[1] };
 
-  if ($qname eq $base and $qtype =~ m/^(NS|SOA)$/) {
-    if ($qtype eq "SOA" or $qtype eq "ANY") {
+  if ($qname eq $base and $qtype =~ m/^(NS|SOA)$/x) {
+    if ($qtype eq 'SOA' or $qtype eq 'ANY') {
       push @ans, $self->get_soa_record($config_base);
     }
-    if ($qtype eq "NS" or $qtype eq "ANY") {
+    if ($qtype eq 'NS' or $qtype eq 'ANY') {
       # don't need the authority section for this request ...
       @auth = @add = ();
       push @ans, @{ ($self->get_ns_records($config_base))[0] };
@@ -70,12 +70,12 @@ sub reply_handler {
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
 
-  my ($group_host) = ($qname =~ m/(?:(.*)\.)?\Q$base\E$/);
+  my ($group_host) = ($qname =~ m/(?:(.*)\.)?\Q$base\E$/x);
   if ($config_base->{groups}->{$group_host||''}) {
     my $qgroup = $group_host || '';
 
     my @hosts;
-    if ($qtype =~ m/^(A|ANY|TXT)$/) {
+    if ($qtype =~ m/^(A|ANY|TXT)$/x) {
       my (@groups) = $self->pick_groups($config_base, $peerhost, $qgroup);
       for my $group (@groups) { 
 	push @hosts, $self->pick_hosts($config_base, $group);
@@ -86,23 +86,23 @@ sub reply_handler {
       # @hosts = (@hosts[0,1]) if @hosts > 2;
     }
     
-    if ($qtype eq "A" or $qtype eq "ANY") {
+    if ($qtype eq 'A' or $qtype eq 'ANY') {
       for my $host (@hosts) {
           push @ans, Net::DNS::RR->new(
                                        name => $qname,
                                        ttl => $config_base->{ttl},
-                                       type => "A",
+                                       type => 'A',
                                        address => $host->{ip}
                                        );
       }
     } 
 
-    if ($qtype eq "TXT" or $qtype eq "ANY") {
+    if ($qtype eq 'TXT' or $qtype eq 'ANY') {
       for my $host (@hosts) {
           push @ans, Net::DNS::RR->new(
                                        name => $qname,
                                        ttl => $config_base->{ttl},
-                                       type => "TXT",
+                                       type => 'TXT',
                                        txtdata => "$host->{ip}/$host->{name}"
                                        );
       }
@@ -120,24 +120,24 @@ sub reply_handler {
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
  }
 
-  elsif ($qname =~ m/^status\.\Q$base\E$/) {
+  elsif ($qname =~ m/^status\.\Q$base\E$/x) {
     my $uptime = time - $stats->{started} || 1;
     # TODO: convert to 2w3d6h format ...
-    my $status = sprintf "%s, upt: %i, q: %i, %.2f/qps",
+    my $status = sprintf '%s, upt: %i, q: %i, %.2f/qps',
       $self->{interface}, $uptime, $stats->{queries}, $stats->{queries}/$uptime;
       warn Data::Dumper->Dump([\$stats], [qw(stats)]);
-    push @ans, Net::DNS::RR->new("$qname. 1 IN TXT '$status'") if $qtype eq "TXT" or $qtype eq "ANY";
+    push @ans, Net::DNS::RR->new("$qname. 1 IN TXT '$status'") if $qtype eq 'TXT' or $qtype eq 'ANY';
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
-  elsif ($qname =~ m/^version\.\Q$base\E$/) {
+  elsif ($qname =~ m/^version\.\Q$base\E$/x) {
     my $version = "$self->{interface}, v$VERSION/$REVISION $HeadURL";
-    push @ans, Net::DNS::RR->new("$qname. 1 IN TXT '$version'") if $qtype eq "TXT" or $qtype eq "ANY";
+    push @ans, Net::DNS::RR->new("$qname. 1 IN TXT '$version'") if $qtype eq 'TXT' or $qtype eq 'ANY';
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
   else {
     @auth = $self->get_soa_record($config_base);
-    warn "return cruft ...";
-    return ("NXDOMAIN", [], \@auth, [], { aa => 1 });
+    warn 'return cruft ...';
+    return ('NXDOMAIN', [], \@auth, [], { aa => 1 });
   }
 
 }
@@ -173,13 +173,13 @@ sub pick_groups {
 
   my @candidates = ($country);
   push @candidates, $continent
-    unless $continent eq "asia";
-  push @candidates, "";  
+    unless $continent eq 'asia';
+  push @candidates, '';  
 
   my @groups;
 
   for my $candidate (@candidates) {
-    my $group = join ".", grep { $_ } $qgroup,$candidate;
+    my $group = join '.', grep { $_ } $qgroup,$candidate;
     push @groups, $group if $config_base->{groups}->{$group};
   }
 		     
@@ -203,7 +203,7 @@ sub pick_hosts {
                  )[rand scalar @{ $config_base->{groups}->{$group}->{servers} }];
     ($host, my $priority) = @$host;
     next if grep { $host eq $_->{name} } @answer;
-    my $ip = $host =~ m/^\d{1,3}(.\d{1,3}){3}$/ ? $host : $config_base->{hosts}->{$host}->{ip};
+    my $ip = $host =~ m/^\d{1,3}(.\d{1,3}){3}$/x ? $host : $config_base->{hosts}->{$host}->{ip};
     push @answer, ({ name => $host, ip => $ip });
   }
 
@@ -214,8 +214,8 @@ sub pick_hosts {
 sub find_base {
   # should we cache these?
   my ($self, $qname) = @_;
-  my $base = "";
-  map { $base = $_ if $qname =~ m/(?:^|\.)\Q$_\E$/ and length $_ > length $base } keys %{ $self->config->{bases} };
+  my $base;
+  map { $base = $_ if $qname =~ m/(?:^|\.)\Q$_\E$/x and (!$base or length $_ > length $base) } keys %{ $self->config->{bases} };
   return $base;
 }
 
@@ -270,10 +270,10 @@ sub _read_config {
   my $file = shift;
 
   if (grep {$_ eq $file} @config_file_stack) {
-    die "Oops, recursive inclusion of $file - parent(s): ", join ", ", @config_file_stack;
+    die "Oops, recursive inclusion of $file - parent(s): ", join ', ', @config_file_stack;
   }
 
-  open my $fh, "<", $file
+  open my $fh, '<', $file
     or warn "Can't open config file: $file: $!\n" and return;
 
   push @config_file_stack, $file;
@@ -292,7 +292,7 @@ sub _read_config {
       $base_name .= '.' unless $base_name =~ m/\.$/;
       $config->{base} = $base_name;
       if ($json_file) {
-          open my $json_fh, "<", $json_file or warn "Could not open $json_file: $!\n" and next;
+          open my $json_fh, '<', $json_file or warn "Could not open $json_file: $!\n" and next;
           push @{ $config->{files} }, [$json_file, (stat($json_file))[9]];
           my $json = eval { local $/ = undef; <$json_fh> };
           close $json_fh;
@@ -309,7 +309,7 @@ sub _read_config {
     unless ($config->{base}) {
       if (s/^ns\s+//) {
 	my ($name, $ip) = split /\s+/, $_;
-        $name .= "." unless $name =~ m/\.$/;
+        $name .= '.' unless $name =~ m/\.$/;
 	$config->{ns}->{$name} = $ip;
 	$config->{primary_ns} = $name
 	  unless $config->{primary_ns};
@@ -329,7 +329,7 @@ sub _read_config {
 
     if (s/^ns\s+//) {
       my ($name, $ip) = split /\s+/, $_;
-      $name .= "." unless $name =~ m/\.$/;  # TODO: refactor this so these lines aren't duplicated
+      $name .= '.' unless $name =~ m/\.$/;  # TODO: refactor this so these lines aren't duplicated
                                             # with the ones above
       $config_base->{ns}->{$name} = $ip;
       $config_base->{primary_ns} = $name
@@ -341,7 +341,7 @@ sub _read_config {
     else {
       s/^\s*10+\s+//;
       my ($host, $ip, $groups) = split(/\s+/,$_,3);
-      die "Bad configuration line: [$_]\n" unless $groups; 
+      die "Bad configuration line: [$_]\n" unless $groups;
       $host = "$host." unless $host =~ m/\.$/;
       $config_base->{hosts}->{$host} = { ip => $ip };
       for my $group_name (split /\s+/, $groups) {
