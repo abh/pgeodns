@@ -3,7 +3,6 @@ use base qw(Exporter);
 @EXPORT_OK = qw(continent);
 use strict;
 
-
 my %country;
 
 while (<DATA>) {
@@ -33,6 +32,41 @@ sub continent {
 #  printf "%s,%s,%s\n", lc $code,eval {my $x = $continent->name; $x =~ s/\s/-/g; lc $x},$country->name;
 #
 #}
+
+__POD__
+
+=head1 NAME
+
+GeoDNS::Countries - Map country codes to continents
+ 
+=head1 SYNOPSIS
+
+   use GeoDNS::Countries qw(continent);
+
+   my $continent = continent("dk");
+   print $continent;  # "europe"
+
+=head1 DESCRIPTION
+
+=over 4
+
+=item continent( $country_code )
+
+Takes a country code and returns a continent name.  The "continents" are
+
+   africa
+   antarctica
+   asia
+   europe
+   north-america
+   south-america
+   oceania
+
+=back
+
+=head1 BUGS
+
+The mapping could surely be improved and if nothing else then usefully be sub-divided further.
 
 
 __DATA__

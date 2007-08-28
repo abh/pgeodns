@@ -347,3 +347,22 @@ sub check_config {
 }
 
 1;
+
+
+__POD__
+
+=head1 NAME
+
+GeoDNS
+
+=head1 SYNOPSIS
+
+=head1 DESCRIPTION
+
+=head1 FUNCTIONS
+
+=head1 COPYRIGHT
+
+Copyright 2004-2007 Ask Bjoern Hansen and Develooper LLC.  This work
+is distributed under the Apache License 2.0 (see the F<LICENSE> file
+for more details).
