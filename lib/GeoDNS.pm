@@ -7,7 +7,8 @@ use List::Util qw/max/;
 use Carp;
 use JSON qw();
 
-our $VERSION = ('$Rev: 347 $' =~ m/(\d+)/)[0];
+our $VERSION  = "1.1";
+our $REVISION = ('$Rev: 347 $' =~ m/(\d+)/)[0];
 my $HeadURL = ('$HeadURL: http://svn.develooper.com/repos/pgeodns/trunk/pgeodns.pl $' =~ m!http:(//[^/]+.*)/pgeodns.pl!)[0];
 
 my $config;
@@ -123,7 +124,7 @@ sub reply_handler {
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
   elsif ($qname =~ m/^version\.\Q$base\E$/) {
-    my $version = "$self->{interface}, Rev #$VERSION $HeadURL";
+    my $version = "$self->{interface}, v$VERSION/$REVISION $HeadURL";
     push @ans, Net::DNS::RR->new("$qname. 1 IN TXT '$version'") if $qtype eq "TXT" or $qtype eq "ANY";
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }

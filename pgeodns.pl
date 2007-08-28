@@ -32,6 +32,8 @@ if ($localaddr =~ /[^\d\.]/) {
     $localaddr = $addr;
 }
 
+warn "Starting GeoDNS $GeoDNS::VERSION/$GeoDNS::REVISION on $localaddr\n";
+
 my $ns = Net::DNS::Nameserver->new
   (
    LocalPort    => 53,
