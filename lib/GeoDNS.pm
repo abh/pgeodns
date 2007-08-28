@@ -54,18 +54,18 @@ sub reply_handler {
   my (@ans, @auth, @add);
 
   # when are we supposed to add the SOA record and when the NS records here?
-  push @auth, @{ ($self->get_ns_records($config_base))[0] };
-  push @add,  @{ ($self->get_ns_records($config_base))[1] };
+  push @auth, @{ ($self->_get_ns_records($config_base))[0] };
+  push @add,  @{ ($self->_get_ns_records($config_base))[1] };
 
   if ($qname eq $base and $qtype =~ m/^(NS|SOA)$/x) {
     if ($qtype eq 'SOA' or $qtype eq 'ANY') {
-      push @ans, $self->get_soa_record($config_base);
+      push @ans, $self->_get_soa_record($config_base);
     }
     if ($qtype eq 'NS' or $qtype eq 'ANY') {
       # don't need the authority section for this request ...
       @auth = @add = ();
-      push @ans, @{ ($self->get_ns_records($config_base))[0] };
-      push @add, @{ ($self->get_ns_records($config_base))[1] };
+      push @ans, @{ ($self->_get_ns_records($config_base))[0] };
+      push @add, @{ ($self->_get_ns_records($config_base))[1] };
     }
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
@@ -108,14 +108,14 @@ sub reply_handler {
       }
     } 
 
-    @auth = ($self->get_soa_record($config_base)) unless @ans;
+    @auth = ($self->_get_soa_record($config_base)) unless @ans;
 
     # mark the answer as authoritive (by setting the 'aa' flag
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
 
   }
   elsif ($config_base->{ns}->{$qname}) {
-    push @ans, grep { $_->address eq $config_base->{ns}->{$qname} } @{ ($self->get_ns_records($config_base))[1] };
+    push @ans, grep { $_->address eq $config_base->{ns}->{$qname} } @{ ($self->_get_ns_records($config_base))[1] };
     @add = grep { $_->address ne $config_base->{ns}->{$qname} } @add;
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
  }
@@ -135,15 +135,14 @@ sub reply_handler {
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
   else {
-    @auth = $self->get_soa_record($config_base);
-    warn 'return cruft ...';
+    @auth = $self->_get_soa_record($config_base);
     return ('NXDOMAIN', [], \@auth, [], { aa => 1 });
   }
 
 }
 
 
-sub get_ns_records {
+sub _get_ns_records {
   my ($self, $config_base) = @_;
   my (@ans, @add);
   my $base = $config_base->{base};
@@ -155,7 +154,7 @@ sub get_ns_records {
   return (\@ans, \@add);
 }
 
-sub get_soa_record {
+sub _get_soa_record {
   my ($self, $config_base) = @_;
   return Net::DNS::RR->new
     ("$config_base->{base}. 3600 IN SOA $config_base->{primary_ns};
@@ -386,9 +385,15 @@ GeoDNS
 
 Instantiates a new GeoDNS object.
 
-=item load_config
+=item reply_handler
 
-Loads the c
+=item pick_groups
+
+=item pick_hosts
+
+=item load_config($file_name)
+
+Loads the specified configuration file (defaults to "pgeodns.conf")
 
 =item config
 
