@@ -48,7 +48,9 @@ sub reply_handler {
   $stats->{qtype}->{$qtype}++;
   $stats->{queries}++;
 
-  my $base = $self->find_base($qname) or return 'SERVFAIL';
+  my ($base, $qgroup) = $self->find_base($qname);
+  $base or return 'SERVFAIL';
+
   my $config_base = $self->config($base);
 
   my (@ans, @auth, @add);
@@ -58,10 +60,10 @@ sub reply_handler {
   push @add,  @{ ($self->_get_ns_records($config_base))[1] };
 
   if ($qname eq $base and $qtype =~ m/^(NS|SOA)$/x) {
-    if ($qtype eq 'SOA' or $qtype eq 'ANY') {
+    if ($qtype eq 'SOA') {
       push @ans, $self->_get_soa_record($config_base);
     }
-    if ($qtype eq 'NS' or $qtype eq 'ANY') {
+    if ($qtype eq 'NS') {
       # don't need the authority section for this request ...
       @auth = @add = ();
       push @ans, @{ ($self->_get_ns_records($config_base))[0] };
@@ -70,9 +72,7 @@ sub reply_handler {
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
 
-  my ($group_host) = ($qname =~ m/(?:(.*)\.)?\Q$base\E$/x);
-  if ($config_base->{groups}->{$group_host||''}) {
-    my $qgroup = $group_host || '';
+  if ($config_base->{groups}->{$qgroup}) {
 
     my @hosts;
     if ($qtype =~ m/^(A|ANY|TXT)$/x) {
@@ -215,7 +215,14 @@ sub find_base {
   my ($self, $qname) = @_;
   my $base;
   map { $base = $_ if $qname =~ m/(?:^|\.)\Q$_\E$/x and (!$base or length $_ > length $base) } keys %{ $self->config->{bases} };
-  return $base;
+
+  return $base unless $base and wantarray;
+
+  my ($qgroup) = ($qname =~ m/(?:(.*)\.)? # "group name"
+                              \Q$base\E$  # anchor in the base name
+                            /x);
+
+  return ($base, $qgroup || '');
 }
 
 sub load_config {

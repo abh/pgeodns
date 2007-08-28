@@ -12,5 +12,9 @@ ok(($ans, $add) = ($g->_get_ns_records($g->config('some.example.com.'))), "get_n
 is_deeply( [sort map {$_->nsdname} @$ans], ['ns1.some', 'ns2.some'], 'nsdname - some.example.com');
 is($add->[0]->address, '127.0.0.1', 'ip in additional section');
 
+ok(my @ans = $g->reply_handler("one.example.com", "IN", "NS", "192.168.0.10"), "reply_handler test");
+is($ans[1]->[0]->nsdname, 'ns1.one', 'correct NS');
+
+
 #use Data::Dumper;
 #warn Data::Dumper->Dump([\$ans, \$add], [qw(ans add)]);

@@ -9,4 +9,11 @@ is($g->find_base("www.example.com."),      "example.com.",      "find_base(examp
 is($g->find_base("some.example.com."),     "some.example.com.", "find_base(some.example.com)");
 is($g->find_base("foo.some.example.com."), "some.example.com.", "find_base(foo.some.example.com)");
 
+is_deeply([ $g->find_base("blah.foo.some.example.com.") ], [ "some.example.com.", 'blah.foo' ], 
+          "find_base(blah.foo.some.example.com), list context");
+
+is_deeply([ $g->find_base("some.example.com.") ], [ "some.example.com.", '' ], 
+          "find_base(some.example.com), list context");
+
+
 1;

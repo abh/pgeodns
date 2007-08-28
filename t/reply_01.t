@@ -25,8 +25,3 @@ warn Data::Dumper->Dump([\@ans], [qw(ans)]);
 
 #is($ans[1]->[0]->address, qr/192.168.1.[234]/, 'correct a record came back for www');
 
-
-
-
-
-
