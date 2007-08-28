@@ -12,21 +12,22 @@ our $REVISION = ('$Rev: 347 $' =~ m/(\d+)/)[0];
 my $HeadURL = ('$HeadURL: http://svn.develooper.com/repos/pgeodns/trunk/pgeodns.pl $'
                  =~ m!http:(//[^/]+.*)/pgeodns.pl!)[0];
 
-my $config;
-my $stats;
-$stats->{started} = time;
 my $gi = Geo::IP->new(GEOIP_STANDARD);
 
 sub new {
   my $class = shift;
   my %args  = @_;
+
+  $args{config};
+  $args{stats}->{started} = time;
+
   bless \%args, $class;
 }
 
 sub config {
   my ($self, $base) = @_;
-  return $config unless $base;
-  return $config->{bases}->{$base} || {};
+  return $self->{config} unless $base;
+  return $self->{config}->{bases}->{$base} || {};
 }
 
 sub reply_handler {
@@ -38,6 +39,8 @@ sub reply_handler {
   $qname = lc $qname . ".";
 
   warn "$peerhost | $qname | $qtype $qclass \n";
+
+  my $stats = $self->{stats};
 
   $stats->{qname}->{$qname}++;
   $stats->{qtype}->{$qtype}++;
@@ -210,18 +213,19 @@ sub find_base {
   # should we cache these?
   my ($self, $qname) = @_;
   my $base = "";
-  map { $base = $_ if $qname =~ m/(?:^|\.)\Q$_\E$/ and length $_ > length $base } keys %{ $config->{bases} };
+  map { $base = $_ if $qname =~ m/(?:^|\.)\Q$_\E$/ and length $_ > length $base } keys %{ $self->config->{bases} };
   $base;
 }
 
 sub load_config {
-  my $self = shift;
+  my $self     = shift;
+  my $filename = shift || 'pgeodns.conf';
 
-  $config = {};
+  my $config = {};
   $config->{last_config_check} = time;
   $config->{files} = [];
 
-  read_config( shift || 'pgeodns.conf' );
+  _read_config( $config, $filename );
 
   delete $config->{base};
 
@@ -252,12 +256,15 @@ sub load_config {
   # use Data::Dumper;
   # warn Data::Dumper->Dump([\$config], [qw(config)]);
 
+  $self->{config} = $config;
+
   1;
 }
 
 my @config_file_stack;
 
-sub read_config {
+sub _read_config {
+  my $config = shift;
   my $file = shift;
 
   if (grep {$_ eq $file} @config_file_stack) {
@@ -293,7 +300,7 @@ sub read_config {
       next;
     }
     elsif (s/^include\s+//) {
-      read_config($_);
+      _read_config($config, $_);
       next;
     }
 
@@ -346,8 +353,9 @@ sub read_config {
 }
 
 sub check_config {
-  return unless time >= ($config->{last_config_check} + 30);
-  for my $file (@{$config->{files}}) {
+  my $self = shift;
+  return unless time >= ($self->config->{last_config_check} + 30);
+  for my $file (@{$self->config->{files}}) {
     load_config(), last 
       if (stat($file->[0]))[9] != $file->[1]
   }
@@ -366,7 +374,25 @@ GeoDNS
 
 =head1 DESCRIPTION
 
-=head1 FUNCTIONS
+=head1 METHODS
+
+=over 4
+
+=item new
+
+Instantiates a new GeoDNS object.
+
+=item load_config
+
+Loads the c
+
+=item check_config
+
+Checks if any of the configuration files have changed and initiates a
+reload if any file has changed since the last load.  It skips checking
+unless it's been more than 30 seconds since the last check.
+
+=back
 
 =head1 COPYRIGHT
 
