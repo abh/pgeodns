@@ -1,5 +1,6 @@
 package GeoDNS;
 use strict;
+use warnings;
 use Net::DNS::RR;
 use Countries qw(continent);
 use Geo::IP;
@@ -22,7 +23,7 @@ sub new {
   $args{config} = {};
   $args{stats}->{started} = time;
 
-  bless \%args, $class;
+  return bless \%args, $class;
 }
 
 sub config {
@@ -156,9 +157,9 @@ sub get_ns_records {
 
 sub get_soa_record {
   my ($self, $config_base) = @_;
-    Net::DNS::RR->new
-	("$config_base->{base}. 3600 IN SOA $config_base->{primary_ns};
-          support.bitnames.com. $config_base->{serial} 5400 5400 2419200 $config_base->{ttl}");
+  return Net::DNS::RR->new
+    ("$config_base->{base}. 3600 IN SOA $config_base->{primary_ns};
+      support.bitnames.com. $config_base->{serial} 5400 5400 2419200 $config_base->{ttl}");
 }
 
 sub pick_groups {
@@ -182,7 +183,7 @@ sub pick_groups {
     push @groups, $group if $config_base->{groups}->{$group};
   }
 		     
-  @groups;
+  return @groups;
 }
 
 sub pick_hosts {
@@ -206,7 +207,7 @@ sub pick_hosts {
     push @answer, ({ name => $host, ip => $ip });
   }
 
-  @answer;
+  return @answer;
 }
 
 
@@ -215,7 +216,7 @@ sub find_base {
   my ($self, $qname) = @_;
   my $base = "";
   map { $base = $_ if $qname =~ m/(?:^|\.)\Q$_\E$/ and length $_ > length $base } keys %{ $self->config->{bases} };
-  $base;
+  return $base;
 }
 
 sub load_config {
@@ -259,7 +260,7 @@ sub load_config {
 
   $self->{config} = $config;
 
-  1;
+  return 1;
 }
 
 my @config_file_stack;
@@ -351,15 +352,17 @@ sub _read_config {
     }
   }
   pop @config_file_stack;
+  return 1;
 }
 
 sub check_config {
   my $self = shift;
   return unless time >= ($self->config->{last_config_check} + 30);
   for my $file (@{$self->config->{files}}) {
-    load_config(), last 
+    do { load_config(); last }
       if (stat($file->[0]))[9] != $file->[1]
   }
+  return 1;
 }
 
 1;
