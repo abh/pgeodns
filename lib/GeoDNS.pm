@@ -272,7 +272,7 @@ sub _read_config {
     die "Oops, recursive inclusion of $file - parent(s): ", join ", ", @config_file_stack;
   }
 
-  open my $fh, $file
+  open my $fh, "<", $file
     or warn "Can't open config file: $file: $!\n" and return;
 
   push @config_file_stack, $file;
@@ -291,7 +291,7 @@ sub _read_config {
       $base_name .= '.' unless $base_name =~ m/\.$/;
       $config->{base} = $base_name;
       if ($json_file) {
-          open my $json_fh, $json_file or warn "Could not open $json_file: $!\n" and next;
+          open my $json_fh, "<", $json_file or warn "Could not open $json_file: $!\n" and next;
           push @{ $config->{files} }, [$json_file, (stat($json_file))[9]];
           my $json = eval { local $/ = undef; <$json_fh> };
           close $json_fh;
