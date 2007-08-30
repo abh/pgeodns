@@ -188,25 +188,57 @@ sub pick_groups {
 }
 
 sub pick_hosts {
-  my ($self, $config_base, $group) = @_;
+  my ($self, $config_base, $group_name) = @_;
 
-  return unless $config_base->{groups}->{$group} and $config_base->{groups}->{$group}->{servers}; 
+  my $group = $config_base->{groups}->{$group_name};
+  return unless $group and $group->{servers};
 
   my @answer;
   my $max = $config_base->{max_hosts} || 2;
-  $max = 1 unless scalar @{ $config_base->{groups}->{$group}->{servers} };
 
   my $loop = 0;
 
-  while (@answer < $max) {
+  unless ($group->{total_weight}) {
+      # find total weight;
+      my $total = 0;
+      my @servers = ();
+      for (sort { $a->[1] <=> $b->[1] } @{$group->{servers}}) {
+          $total += $_->[1];
+          push @servers, [0,$_];
+      }
+      $group->{servers} = \@servers;
+      $group->{total_weight} = $total;
+  }
+
+  my $total_weight = $group->{total_weight};
+
+  #warn Data::Dumper->Dump([\{$group->{servers}}], [qw(servers)]);
+
+  my @picked;
+
+  while ($total_weight and @answer < $max) {
     last if ++$loop > 10;  # bad configuration could make us loop ...
-    my ($host) = ( @{ $config_base->{groups}->{$group}->{servers} }
-                 )[rand scalar @{ $config_base->{groups}->{$group}->{servers} }];
-    ($host, my $priority) = @$host;
-    next if grep { $host eq $_->{name} } @answer;
+
+    my $n = int(rand( $total_weight ));
+    my $host;
+    my $total = 0;
+    for (@{$group->{servers}}) {
+        next if $_->[0];
+        $total += $_->[1]->[1];
+        if ($total > $n) {
+            push @picked, $_;
+            $_->[0] = 1;
+            $total_weight -= $_->[1]->[1];
+            $host = $_->[1]->[0];
+            last;
+        }
+    }
+
     my $ip = $host =~ m/^\d{1,3}(.\d{1,3}){3}$/x ? $host : $config_base->{hosts}->{$host}->{ip};
     push @answer, ({ name => $host, ip => $ip });
   }
+
+  map { $_->[0] = 0 } @picked;
 
   return @answer;
 }
@@ -403,6 +435,8 @@ Instantiates a new GeoDNS object.
 =item pick_groups
 
 =item pick_hosts
+
+=item pick_host
 
 =item load_config($file_name)
 
