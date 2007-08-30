@@ -20,6 +20,8 @@ sub new {
   my $class = shift;
   my %args  = @_;
 
+  $args{interface} ||= 'unknown_interface';
+
   $args{config} = {};
   $args{stats}->{started} = time;
 
@@ -121,7 +123,7 @@ sub reply_handler {
  }
 
   elsif ($qname =~ m/^status\.\Q$base\E$/x) {
-    my $uptime = time - $stats->{started} || 1;
+    my $uptime = (time - $stats->{started}) || 1;
     # TODO: convert to 2w3d6h format ...
     my $status = sprintf '%s, upt: %i, q: %i, %.2f/qps',
       $self->{interface}, $uptime, $stats->{queries}, $stats->{queries}/$uptime;
@@ -214,7 +216,9 @@ sub find_base {
   # should we cache these?
   my ($self, $qname) = @_;
   my $base;
-  map { $base = $_ if $qname =~ m/(?:^|\.)\Q$_\E$/x and (!$base or length $_ > length $base) } keys %{ $self->config->{bases} };
+  map { $base = $_ if $qname =~ m/(?:^|\.)\Q$_\E$/x
+          and (!$base or length $_ > length $base)
+      } keys %{ $self->config->{bases} };
 
   return $base unless $base and wantarray;
 
@@ -240,7 +244,8 @@ sub load_config {
   # warn Data::Dumper->Dump([\$config], [qw(config)]);
 
   # the default serial is timestamp of the newest config file. 
-  $config->{serial} = max map {$_->[1]} @{ $config->{files} } unless $config->{serial} and $config->{serial} =~ m/^\d+$/;
+  $config->{serial} = max map {$_->[1]} @{ $config->{files} }
+    unless $config->{serial} and $config->{serial} =~ m/^\d+$/;
   $config->{ttl}    = 180 unless $config->{ttl} and $config->{ttl} !~ m/\D/;
 
   for my $base (keys %{$config->{bases}}) {

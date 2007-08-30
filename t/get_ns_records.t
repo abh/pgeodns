@@ -13,7 +13,10 @@ is_deeply( [sort map {$_->nsdname} @$ans], ['ns1.some', 'ns2.some'], 'nsdname - 
 is($add->[0]->address, '127.0.0.1', 'ip in additional section');
 
 ok(my @ans = $g->reply_handler("one.example.com", "IN", "NS", "192.168.0.10"), "reply_handler test");
-is($ans[1]->[0]->nsdname, 'ns1.one', 'correct NS');
+is($ans[1]->[0]->nsdname, 'ns1.one.example.com', 'correct NS');
+
+ok(@ans = $g->reply_handler("ns1.one.example.com", "IN", "A", "192.168.0.10"), "reply_handler test");
+is($ans[1]->[0]->address, '127.0.0.2', 'correct A record for NS');
 
 
 #use Data::Dumper;
