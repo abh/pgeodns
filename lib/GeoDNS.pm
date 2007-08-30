@@ -4,7 +4,7 @@ use warnings;
 use Net::DNS::RR;
 use Countries qw(continent);
 use Geo::IP;
-use List::Util qw/max/;
+use List::Util qw/max shuffle/;
 use Carp qw(carp croak);
 use JSON qw();
 use Data::Dumper;
@@ -84,8 +84,6 @@ sub reply_handler {
 	last if @hosts; 
 	  # add ">= 2" to force at least two hosts even if the second one won't be as local 
       }
-      # only return two hosts
-      # @hosts = (@hosts[0,1]) if @hosts > 2;
     }
     
     if ($qtype eq 'A' or $qtype eq 'ANY') {
@@ -105,7 +103,10 @@ sub reply_handler {
                                        name => $qname,
                                        ttl => $config_base->{ttl},
                                        type => 'TXT',
-                                       txtdata => "$host->{ip}/$host->{name}"
+                                       txtdata => ($host->{ip} eq $host->{name} 
+                                                   ? "$host->{ip}-$host->{weight}"
+                                                   : "$host->{ip}/$host->{name}-$host->{weight}"
+                                                  ),
                                        );
       }
     } 
@@ -229,13 +230,16 @@ sub pick_hosts {
             push @picked, $_;
             $_->[0] = 1;
             $total_weight -= $_->[1]->[1];
-            $host = $_->[1]->[0];
+            $host = $_->[1];
             last;
         }
     }
 
-    my $ip = $host =~ m/^\d{1,3}(.\d{1,3}){3}$/x ? $host : $config_base->{hosts}->{$host}->{ip};
-    push @answer, ({ name => $host, ip => $ip });
+    my $hostname = $host->[0];
+
+    my $ip = $hostname =~ m/^\d{1,3}(.\d{1,3}){3}$/x ? $hostname : $config_base->{hosts}->{$hostname}->{ip};
+
+    push @answer, ({ name => $hostname, ip => $ip, weight => $host->[1] });
   }
 
   map { $_->[0] = 0 } @picked;
