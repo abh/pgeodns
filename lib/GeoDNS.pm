@@ -10,8 +10,8 @@ use JSON qw();
 use Data::Dumper;
 
 our $VERSION  = '1.1';
-our $REVISION = ('$Rev: 347 $' =~ m/(\d+)/x)[0];
-my $HeadURL = ('$HeadURL: http://svn.develooper.com/repos/pgeodns/trunk/pgeodns.pl $'
+our $REVISION = ('$Rev$' =~ m/(\d+)/x)[0];
+my $HeadURL = ('$HeadURL$'
                  =~ m!http:(//[^/]+.*)/pgeodns.pl!x)[0];
 
 my $gi = Geo::IP->new(GEOIP_STANDARD);

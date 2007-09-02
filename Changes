@@ -1,5 +1,5 @@
 
-
+   - Make the HeadURL and Revision be updated via SVN
    - read .json data files (to bulk save/load configuration)
    - support __END__ to stop reading a configuration file
    - max_hosts configuration (should probably be renamed?)
