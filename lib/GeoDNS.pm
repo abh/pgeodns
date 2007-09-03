@@ -267,7 +267,7 @@ sub find_base {
 
 sub load_config {
   my $self     = shift;
-  my $filename = shift or croak "load_config requires a filename";
+  my $filename = shift or confess "load_config requires a filename";
 
   my $config = {};
   $config->{last_config_check} = time;
@@ -406,6 +406,8 @@ sub check_config {
   my $self = shift;
   return unless time >= ($self->config->{last_config_check} + 30);
   my ($first_file) = (@{$self->config->{files}})[0];
+  cluck 'No "first_file' unless $first_file;
+  #return unless $first_file;
   for my $file (@{$self->config->{files}}) {
     do { load_config($first_file); last }
       if (stat($file->[0]))[9] != $file->[1]
