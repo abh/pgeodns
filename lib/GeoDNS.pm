@@ -5,7 +5,7 @@ use Net::DNS::RR;
 use Countries qw(continent);
 use Geo::IP;
 use List::Util qw/max shuffle/;
-use Carp qw(carp croak);
+use Carp qw(carp croak confess);
 use JSON qw();
 use Data::Dumper;
 
