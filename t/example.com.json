@@ -1,7 +1,7 @@
 { "serial": 1,
   "ttl":    600,
-  "ns":  { "ns1.example.net": null, "ns2.example.net": null },
-  "groups" : {
+  "data" : {
+    "":  { "ns": { "ns1.example.net": null, "ns2.example.net": null } },
     "foo": { 
       "servers": [ [ "192.168.1.2", 10 ], [ "192.168.1.3", 10 ], [ "192.168.1.4", 10 ] ]
     },

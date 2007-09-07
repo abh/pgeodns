@@ -19,9 +19,3 @@ is($ans[0], 'SERVFAIL', 'not existing base returns SERVFAIL');
 ok(@ans = $g->reply_handler("foo-not.example.com", "IN", "A", "192.168.0.10"), "request for not existing domain");
 is($ans[0], 'NXDOMAIN', 'not existing domain returns NXDOMAIN');
 
-
-ok(@ans = $g->reply_handler("www.example.com", "IN", "A", "192.168.0.10"), "www.example.com A (to return cname)");
-warn Data::Dumper->Dump([\@ans], [qw(ans)]);
-
-#is($ans[1]->[0]->address, qr/192.168.1.[234]/, 'correct a record came back for www');
-

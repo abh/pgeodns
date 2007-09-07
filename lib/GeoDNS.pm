@@ -74,7 +74,7 @@ sub reply_handler {
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
 
-  if ($config_base->{groups}->{$qgroup}) {
+  if ($config_base->{data}->{$qgroup}) {
 
     my @hosts;
     if ($qtype =~ m/^(A|ANY|TXT)$/x) {
@@ -117,9 +117,10 @@ sub reply_handler {
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
 
   }
-  elsif ($config_base->{ns}->{$qname}) {
-    push @ans, grep { $_->address eq $config_base->{ns}->{$qname} } @{ ($self->_get_ns_records($config_base))[1] };
-    @add = grep { $_->address ne $config_base->{ns}->{$qname} } @add;
+  # TODO: these should be converted to A records during the configuration phase
+  elsif ($config_base->{data}->{''}->{ns}->{$qname}) {
+    push @ans, grep { $_->address eq $config_base->{data}->{''}->{ns}->{$qname} } @{ ($self->_get_ns_records($config_base))[1] };
+    @add = grep { $_->address ne $config_base->{data}->{''}->{ns}->{$qname} } @add;
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
  }
 
@@ -149,10 +150,12 @@ sub _get_ns_records {
   my ($self, $config_base) = @_;
   my (@ans, @add);
   my $base = $config_base->{base};
-  for my $ns (keys %{ $config_base->{ns} }) {
+  my $data = $config_base->{data}->{''};
+
+  for my $ns (keys %{ $data->{ns} }) {
     push @ans, Net::DNS::RR->new("$base 86400 IN NS $ns.");
-    push @add, Net::DNS::RR->new("$ns. 86400 IN A $config_base->{ns}->{$ns}")
-      if $config_base->{ns}->{$ns};
+    push @add, Net::DNS::RR->new("$ns. 86400 IN A $data->{ns}->{$ns}")
+      if $data->{ns}->{$ns};
   }
   return (\@ans, \@add);
 }
@@ -182,7 +185,7 @@ sub pick_groups {
 
   for my $candidate (@candidates) {
     my $group = join '.', grep { $_ } $qgroup,$candidate;
-    push @groups, $group if $config_base->{groups}->{$group};
+    push @groups, $group if $config_base->{data}->{$group};
   }
 		     
   return @groups;
@@ -191,7 +194,7 @@ sub pick_groups {
 sub pick_hosts {
   my ($self, $config_base, $group_name) = @_;
 
-  my $group = $config_base->{groups}->{$group_name};
+  my $group = $config_base->{data}->{$group_name};
   return unless $group and $group->{servers};
 
   my @answer;
@@ -287,20 +290,28 @@ sub load_config {
   for my $base (keys %{$config->{bases}}) {
     my $config_base = $config->{bases}->{$base};
 
+    # use default ns entries
+    $config_base->{data}->{""}->{ns} ||= $config->{ns};
+
     # for the old style configs we do this when the first NS is set,
     # but we don't have that cleanup for "pure" json configs
     unless ($config_base->{primary_ns}) {
-        ($config_base->{primary_ns}) = keys %{$config_base->{ns}} if $config_base->{ns};
+        ($config_base->{primary_ns}) = sort keys %{$config_base->{data}->{""}->{ns}} if $config_base->{data}->{""}->{ns};
     }
 
-    for my $f (qw(ns primary_ns ttl serial)) {
+    for my $f (qw(primary_ns ttl serial)) {
       $config_base->{$f} = $config->{$f} or die "default $f needed but not set"
 	unless $config_base->{$f};
     }
 
+    warn Data::Dumper->Dump([\$config_base], [qw(config_base)]);
+
     die "no ns configured in the config file for base $base"
-      unless $config_base->{ns};
+      unless $config_base->{data}->{''}->{ns};
   }
+
+  
+  
 
   # use Data::Dumper;
   # warn Data::Dumper->Dump([\$config], [qw(config)]);
@@ -378,7 +389,7 @@ sub _read_config {
       my ($name, $ip) = split /\s+/, $_;
       $name .= '.' unless $name =~ m/\.$/;  # TODO: refactor this so these lines aren't duplicated
                                             # with the ones above
-      $config_base->{ns}->{$name} = $ip;
+      $config_base->{data}->{''}->{ns}->{$name} = $ip;
       $config_base->{primary_ns} = $name
 	unless $config_base->{primary_ns};
     }
@@ -393,8 +404,8 @@ sub _read_config {
       $config_base->{hosts}->{$host} = { ip => $ip };
       for my $group_name (split /\s+/, $groups) {
 	$group_name = '' if $group_name eq '@';
-	$config_base->{groups}->{$group_name}->{servers} ||= [];
-	push @{$config_base->{groups}->{$group_name}->{servers}}, [ $host, 1 ];
+	$config_base->{data}->{$group_name}->{servers} ||= [];
+	push @{$config_base->{data}->{$group_name}->{servers}}, [ $host, 1 ];
       }
     }
   }
