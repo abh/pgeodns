@@ -50,7 +50,7 @@ sub reply_handler {
   $stats->{qtype}->{$qtype}++;
   $stats->{queries}++;
 
-  my ($base, $qgroup) = $self->find_base($qname);
+  my ($base, $query_name) = $self->find_base($qname);
   $base or return 'SERVFAIL';
 
   my $config_base = $self->config($base);
@@ -60,6 +60,8 @@ sub reply_handler {
   # when are we supposed to add the SOA record and when the NS records here?
   push @auth, @{ ($self->_get_ns_records($config_base))[0] };
   push @add,  @{ ($self->_get_ns_records($config_base))[1] };
+
+  
 
   if ($qname eq $base and $qtype =~ m/^(NS|SOA)$/x) {
     if ($qtype eq 'SOA') {
@@ -74,11 +76,11 @@ sub reply_handler {
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
 
-  if ($config_base->{data}->{$qgroup}) {
+  if ($config_base->{data}->{$query_name}) {
 
     my @hosts;
     if ($qtype =~ m/^(A|ANY|TXT)$/x) {
-      my (@groups) = $self->pick_groups($config_base, $peerhost, $qgroup);
+      my (@groups) = $self->pick_groups($config_base, $peerhost, $query_name);
       for my $group (@groups) { 
 	push @hosts, $self->pick_hosts($config_base, $group);
 	last if @hosts; 
@@ -253,19 +255,19 @@ sub pick_hosts {
 
 sub find_base {
   # should we cache these?
-  my ($self, $qname) = @_;
+  my ($self, $full_name) = @_;
   my $base;
-  map { $base = $_ if $qname =~ m/(?:^|\.)\Q$_\E$/x
+  map { $base = $_ if $full_name =~ m/(?:^|\.)\Q$_\E$/x
           and (!$base or length $_ > length $base)
       } keys %{ $self->config->{bases} };
 
   return $base unless $base and wantarray;
 
-  my ($qgroup) = ($qname =~ m/(?:(.*)\.)? # "group name"
+  my ($query_name) = ($full_name =~ m/(?:(.*)\.)? # "group name"
                               \Q$base\E$  # anchor in the base name
                             /x);
 
-  return ($base, $qgroup || '');
+  return ($base, $query_name || '');
 }
 
 sub load_config {
