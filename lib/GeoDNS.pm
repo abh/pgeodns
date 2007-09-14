@@ -12,7 +12,7 @@ use Data::Dumper;
 our $VERSION  = '1.1';
 our $REVISION = ('$Rev$' =~ m/(\d+)/x)[0];
 my $HeadURL = ('$HeadURL$'
-                 =~ m!https?:(//[^/]+.*)(?:/lib.*)!x)[0];
+                 =~ m!(?:https?:/?)?(/[^/]+.*)(?:/lib.*)!x)[0];
 
 my $gi = Geo::IP->new(GEOIP_STANDARD);
 
