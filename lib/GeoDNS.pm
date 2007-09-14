@@ -195,7 +195,7 @@ sub pick_hosts {
   my ($self, $config_base, $group_name) = @_;
 
   my $group = $config_base->{data}->{$group_name};
-  return unless $group and $group->{servers};
+  return unless $group and $group->{a};
 
   my @answer;
   my $max = $config_base->{max_hosts} || 2;
@@ -206,7 +206,7 @@ sub pick_hosts {
       # find total weight;
       my $total = 0;
       my @servers = ();
-      for (sort { $a->[1] <=> $b->[1] } @{$group->{servers}}) {
+      for (sort { $a->[1] <=> $b->[1] } @{$group->{a}}) {
           $total += $_->[1];
           push @servers, [0,$_];
       }
@@ -404,8 +404,8 @@ sub _read_config {
       $config_base->{hosts}->{$host} = { ip => $ip };
       for my $group_name (split /\s+/, $groups) {
 	$group_name = '' if $group_name eq '@';
-	$config_base->{data}->{$group_name}->{servers} ||= [];
-	push @{$config_base->{data}->{$group_name}->{servers}}, [ $host, 1 ];
+	$config_base->{data}->{$group_name}->{a} ||= [];
+	push @{$config_base->{data}->{$group_name}->{a}}, [ $host, 1 ];
       }
     }
   }
