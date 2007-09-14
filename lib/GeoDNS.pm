@@ -1,7 +1,7 @@
 package GeoDNS;
 use strict;
 use warnings;
-use Net::DNS::RR;
+use Net::DNS qw(0.60);
 use Countries qw(continent);
 use Geo::IP;
 use List::Util qw/max shuffle/;
@@ -39,34 +39,48 @@ sub reply_handler {
 
   $self->check_config();
 
-  my ($full_name, $query_class, $query_type, $peer_host) = @_;
-  $full_name = lc $full_name . '.';
+  my ($domain, $query_class, $query_type, $peer_host) = @_;
+  $domain = lc $domain . '.';
 
   # warn "$peerhost | $qname | $qtype $qclass \n";
 
   my $stats = $self->{stats};
 
-  $stats->{qname}->{$full_name}++;
+  $stats->{qname}->{$domain}++;
   $stats->{qtype}->{$query_type}++;
   $stats->{queries}++;
 
-  my ($base, $query_name) = $self->find_base($full_name);
+  my ($base, $label) = $self->find_base($domain);
   $base or return 'SERVFAIL';
 
   my $config_base = $self->config($base);
   my $data        = $config_base->{data};
 
   my (@ans, @auth, @add);
-
-  # when are we supposed to add the SOA record and when the NS records here?
-  push @auth, @{ ($self->_get_ns_records($config_base))[0] };
-  push @add,  @{ ($self->_get_ns_records($config_base))[1] };
-
-  if ($query_type eq 'SOA' or $query_type eq 'ANY') {
-      push @ans, $data->{$query_name}->{soa} if $data->{$query_name}->{soa};
+  
+  # TODO: support the groups stuff for cnames
+  if ($data->{$label}->{cname}) {
+      push @ans, Net::DNS::RR->new(
+                                   name => $domain,
+                                   ttl  => $config_base->{ttl},
+                                   type => 'CNAME',
+                                   address => $data->{$label}->{cname},
+                                  );
+      return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
 
-  if ($full_name eq $base and $query_type eq 'NS') {
+  # we don't need an authority section
+  # push @auth, @{ ($self->_get_ns_records($config_base))[0] };
+  
+  # TODO: figure out when this is necessary
+  push @add,  @{ ($self->_get_ns_records($config_base))[1] };
+
+  if ($query_type eq 'SOA' or ($query_type eq 'ANY' and $label eq '')) {
+      my $soa = $data->{$label}->{soa} || $data->{''}->{soa};
+      push @ans, $soa if $soa;
+  }
+
+  if ($domain eq $base and $query_type eq 'NS') {
     if ($query_type eq 'NS') {
       # don't need the authority section for this request ...
       @auth = @add = ();
@@ -76,11 +90,11 @@ sub reply_handler {
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
 
-  if ($config_base->{data}->{$query_name}) {
+  if ($config_base->{data}->{$label}) {
 
     my @hosts;
     if ($query_type =~ m/^(A|ANY|TXT)$/x) {
-      my (@groups) = $self->pick_groups($config_base, $peer_host, $query_name);
+      my (@groups) = $self->pick_groups($config_base, $peer_host, $label);
       for my $group (@groups) { 
 	push @hosts, $self->pick_hosts($config_base, $group);
 	last if @hosts; 
@@ -91,7 +105,7 @@ sub reply_handler {
     if ($query_type eq 'A' or $query_type eq 'ANY') {
       for my $host (@hosts) {
           push @ans, Net::DNS::RR->new(
-                                       name => $full_name,
+                                       name => $domain,
                                        ttl => $config_base->{ttl},
                                        type => 'A',
                                        address => $host->{ip}
@@ -102,7 +116,7 @@ sub reply_handler {
     if ($query_type eq 'TXT' or $query_type eq 'ANY') {
       for my $host (@hosts) {
           push @ans, Net::DNS::RR->new(
-                                       name => $full_name,
+                                       name => $domain,
                                        ttl => $config_base->{ttl},
                                        type => 'TXT',
                                        txtdata => ($host->{ip} eq $host->{name} 
@@ -120,24 +134,24 @@ sub reply_handler {
 
   }
   # TODO: these should be converted to A records during the configuration phase
-  elsif ($config_base->{data}->{''}->{ns}->{$full_name}) {
-    push @ans, grep { $_->address eq $config_base->{data}->{''}->{ns}->{$full_name} } @{ ($self->_get_ns_records($config_base))[1] };
-    @add = grep { $_->address ne $config_base->{data}->{''}->{ns}->{$full_name} } @add;
+  elsif ($config_base->{data}->{''}->{ns}->{$domain}) {
+    push @ans, grep { $_->address eq $config_base->{data}->{''}->{ns}->{$domain} } @{ ($self->_get_ns_records($config_base))[1] };
+    @add = grep { $_->address ne $config_base->{data}->{''}->{ns}->{$domain} } @add;
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
  }
 
-  elsif ($full_name =~ m/^status\.\Q$base\E$/x) {
+  elsif ($domain =~ m/^status\.\Q$base\E$/x) {
     my $uptime = (time - $stats->{started}) || 1;
     # TODO: convert to 2w3d6h format ...
     my $status = sprintf '%s, upt: %i, q: %i, %.2f/qps',
       $self->{interface}, $uptime, $stats->{queries}, $stats->{queries}/$uptime;
       warn Data::Dumper->Dump([\$stats], [qw(stats)]);
-    push @ans, Net::DNS::RR->new("$full_name. 1 IN TXT '$status'") if $query_type eq 'TXT' or $query_type eq 'ANY';
+    push @ans, Net::DNS::RR->new("$domain. 1 IN TXT '$status'") if $query_type eq 'TXT' or $query_type eq 'ANY';
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
-  elsif ($full_name =~ m/^version\.\Q$base\E$/x) {
+  elsif ($domain =~ m/^version\.\Q$base\E$/x) {
     my $version = "$self->{interface}, v$VERSION/$REVISION $HeadURL";
-    push @ans, Net::DNS::RR->new("$full_name. 1 IN TXT '$version'") if $query_type eq 'TXT' or $query_type eq 'ANY';
+    push @ans, Net::DNS::RR->new("$domain. 1 IN TXT '$version'") if $query_type eq 'TXT' or $query_type eq 'ANY';
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
   else {
@@ -255,19 +269,19 @@ sub pick_hosts {
 
 sub find_base {
   # should we cache these?
-  my ($self, $full_name) = @_;
+  my ($self, $domain) = @_;
   my $base;
-  map { $base = $_ if $full_name =~ m/(?:^|\.)\Q$_\E$/x
+  map { $base = $_ if $domain =~ m/(?:^|\.)\Q$_\E$/x
           and (!$base or length $_ > length $base)
       } keys %{ $self->config->{bases} };
 
   return $base unless $base and wantarray;
 
-  my ($query_name) = ($full_name =~ m/(?:(.*)\.)? # "group name"
+  my ($label) = ($domain =~ m/(?:(.*)\.)? # "group name"
                               \Q$base\E$  # anchor in the base name
                             /x);
 
-  return ($base, $query_name || '');
+  return ($base, $label || '');
 }
 
 sub load_config {
