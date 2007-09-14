@@ -15,9 +15,8 @@ WriteMakefile
    #    },
    PREREQ_PM => 
    {
-    'Net::DNS' => 0,
-    'Net::DNS::Nameserver' => 0,
-    'Geo::IP' => 0,
+    'Net::DNS'   => 0.61,
+    'Geo::IP'    => 1.28,
     'List::Util' => 0,
     'JSON' => 0,
    },
