@@ -39,21 +39,22 @@ sub reply_handler {
 
   $self->check_config();
 
-  my ($qname, $qclass, $qtype, $peerhost) = @_;
-  $qname = lc $qname . '.';
+  my ($full_name, $query_class, $query_type, $peer_host) = @_;
+  $full_name = lc $full_name . '.';
 
   # warn "$peerhost | $qname | $qtype $qclass \n";
 
   my $stats = $self->{stats};
 
-  $stats->{qname}->{$qname}++;
-  $stats->{qtype}->{$qtype}++;
+  $stats->{qname}->{$full_name}++;
+  $stats->{qtype}->{$query_type}++;
   $stats->{queries}++;
 
-  my ($base, $query_name) = $self->find_base($qname);
+  my ($base, $query_name) = $self->find_base($full_name);
   $base or return 'SERVFAIL';
 
   my $config_base = $self->config($base);
+  my $data        = $config_base->{data};
 
   my (@ans, @auth, @add);
 
@@ -61,13 +62,12 @@ sub reply_handler {
   push @auth, @{ ($self->_get_ns_records($config_base))[0] };
   push @add,  @{ ($self->_get_ns_records($config_base))[1] };
 
-  
+  if ($query_type eq 'SOA' or $query_type eq 'ANY') {
+      push @ans, $data->{$query_name}->{soa} if $data->{$query_name}->{soa};
+  }
 
-  if ($qname eq $base and $qtype =~ m/^(NS|SOA)$/x) {
-    if ($qtype eq 'SOA') {
-      push @ans, $self->_get_soa_record($config_base);
-    }
-    if ($qtype eq 'NS') {
+  if ($full_name eq $base and $query_type eq 'NS') {
+    if ($query_type eq 'NS') {
       # don't need the authority section for this request ...
       @auth = @add = ();
       push @ans, @{ ($self->_get_ns_records($config_base))[0] };
@@ -79,8 +79,8 @@ sub reply_handler {
   if ($config_base->{data}->{$query_name}) {
 
     my @hosts;
-    if ($qtype =~ m/^(A|ANY|TXT)$/x) {
-      my (@groups) = $self->pick_groups($config_base, $peerhost, $query_name);
+    if ($query_type =~ m/^(A|ANY|TXT)$/x) {
+      my (@groups) = $self->pick_groups($config_base, $peer_host, $query_name);
       for my $group (@groups) { 
 	push @hosts, $self->pick_hosts($config_base, $group);
 	last if @hosts; 
@@ -88,10 +88,10 @@ sub reply_handler {
       }
     }
     
-    if ($qtype eq 'A' or $qtype eq 'ANY') {
+    if ($query_type eq 'A' or $query_type eq 'ANY') {
       for my $host (@hosts) {
           push @ans, Net::DNS::RR->new(
-                                       name => $qname,
+                                       name => $full_name,
                                        ttl => $config_base->{ttl},
                                        type => 'A',
                                        address => $host->{ip}
@@ -99,10 +99,10 @@ sub reply_handler {
       }
     } 
 
-    if ($qtype eq 'TXT' or $qtype eq 'ANY') {
+    if ($query_type eq 'TXT' or $query_type eq 'ANY') {
       for my $host (@hosts) {
           push @ans, Net::DNS::RR->new(
-                                       name => $qname,
+                                       name => $full_name,
                                        ttl => $config_base->{ttl},
                                        type => 'TXT',
                                        txtdata => ($host->{ip} eq $host->{name} 
@@ -120,24 +120,24 @@ sub reply_handler {
 
   }
   # TODO: these should be converted to A records during the configuration phase
-  elsif ($config_base->{data}->{''}->{ns}->{$qname}) {
-    push @ans, grep { $_->address eq $config_base->{data}->{''}->{ns}->{$qname} } @{ ($self->_get_ns_records($config_base))[1] };
-    @add = grep { $_->address ne $config_base->{data}->{''}->{ns}->{$qname} } @add;
+  elsif ($config_base->{data}->{''}->{ns}->{$full_name}) {
+    push @ans, grep { $_->address eq $config_base->{data}->{''}->{ns}->{$full_name} } @{ ($self->_get_ns_records($config_base))[1] };
+    @add = grep { $_->address ne $config_base->{data}->{''}->{ns}->{$full_name} } @add;
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
  }
 
-  elsif ($qname =~ m/^status\.\Q$base\E$/x) {
+  elsif ($full_name =~ m/^status\.\Q$base\E$/x) {
     my $uptime = (time - $stats->{started}) || 1;
     # TODO: convert to 2w3d6h format ...
     my $status = sprintf '%s, upt: %i, q: %i, %.2f/qps',
       $self->{interface}, $uptime, $stats->{queries}, $stats->{queries}/$uptime;
       warn Data::Dumper->Dump([\$stats], [qw(stats)]);
-    push @ans, Net::DNS::RR->new("$qname. 1 IN TXT '$status'") if $qtype eq 'TXT' or $qtype eq 'ANY';
+    push @ans, Net::DNS::RR->new("$full_name. 1 IN TXT '$status'") if $query_type eq 'TXT' or $query_type eq 'ANY';
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
-  elsif ($qname =~ m/^version\.\Q$base\E$/x) {
+  elsif ($full_name =~ m/^version\.\Q$base\E$/x) {
     my $version = "$self->{interface}, v$VERSION/$REVISION $HeadURL";
-    push @ans, Net::DNS::RR->new("$qname. 1 IN TXT '$version'") if $qtype eq 'TXT' or $qtype eq 'ANY';
+    push @ans, Net::DNS::RR->new("$full_name. 1 IN TXT '$version'") if $query_type eq 'TXT' or $query_type eq 'ANY';
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
   else {
@@ -306,10 +306,14 @@ sub load_config {
 	unless $config_base->{$f};
     }
 
-    warn Data::Dumper->Dump([\$config_base], [qw(config_base)]);
-
     die "no ns configured in the config file for base $base"
       unless $config_base->{data}->{''}->{ns};
+
+    warn "LEGACY DATA - NOT SUPPORTED - 'groups' configured for $base\n" if $config_base->{groups};
+
+    $config_base->{data}->{''}->{soa} = $self->_get_soa_record($config_base);
+
+    warn Data::Dumper->Dump([\$config_base], [qw(config_base)]);
   }
 
   
