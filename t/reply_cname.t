@@ -12,5 +12,5 @@ ok(@ans = $g->reply_handler("www.example.com", "IN", "A", "192.168.0.10"), "www.
 
 ok(@{$ans[1]} == 1, 'got only one record');
 is($ans[1]->[0]->type, 'CNAME', 'got cname record');
-is($ans[1]->[0]->address, 'geo.bitnames.com', 'got correct cname data');
+is($ans[1]->[0]->cname, 'geo.bitnames.com', 'got correct cname data');
 

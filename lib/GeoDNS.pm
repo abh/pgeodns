@@ -60,14 +60,17 @@ sub reply_handler {
 
   my $data_label = $data->{$label} || {};
 
+  #warn Data::Dumper->Dump([\$data_label], [qw(data_label)]);
+
   # TODO: support the groups stuff for cnames
   if ($data_label->{cname}) {
       push @ans, Net::DNS::RR->new(
-                                   name => $domain,
-                                   ttl  => $config_base->{ttl},
-                                   type => 'CNAME',
-                                   address => $data_label->{cname},
+                                   name  => $domain,
+                                   ttl   => $config_base->{ttl},
+                                   type  => 'CNAME',
+                                   cname => $data_label->{cname},
                                   );
+      warn Data::Dumper->Dump([\@ans], [qw(answer)]);
       return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
 
@@ -97,9 +100,7 @@ sub reply_handler {
 
   if ($data->{$label}) {
 
-     #warn Data::Dumper->Dump([\$data_label], [qw(data_label)]);
-
-     my @hosts;
+    my @hosts;
     if ($query_type =~ m/^(A|ANY|TXT)$/x) {
       my (@groups) = $self->pick_groups($config_base, $peer_host, $label);
       for my $group (@groups) { 
