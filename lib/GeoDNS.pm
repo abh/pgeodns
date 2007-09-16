@@ -21,7 +21,6 @@ sub new {
   my %args  = @_;
 
   $args{interface} ||= 'unknown_interface';
-
   $args{config} = {};
   $args{stats}->{started} = time;
 
@@ -42,7 +41,7 @@ sub reply_handler {
   my ($domain, $query_class, $query_type, $peer_host) = @_;
   $domain = lc $domain . '.';
 
-  # warn "$peerhost | $qname | $qtype $qclass \n";
+  warn "$peer_host | $domain | $query_type $query_class\n" if $self->{debug};
 
   my $stats = $self->{stats};
 
@@ -71,7 +70,7 @@ sub reply_handler {
                                    type  => 'CNAME',
                                    cname => $data_label->{cname},
                                   );
-      warn Data::Dumper->Dump([\@ans], [qw(answer)]);
+      #warn Data::Dumper->Dump([\@ans], [qw(answer)]);
       return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
 

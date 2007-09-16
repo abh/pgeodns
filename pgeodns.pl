@@ -21,8 +21,9 @@ GetOptions (\%opts,
 die "--interface [ip|hostname] required\n" unless $opts{interface};
 die "--user [user|uid] required\n" unless $opts{user};
 
-
-my $g = GeoDNS->new(interface => $opts{interface});
+my $g = GeoDNS->new(interface => $opts{interface},
+                    debug     => 1,
+                   );
 
 my $localaddr = $opts{interface};
 
