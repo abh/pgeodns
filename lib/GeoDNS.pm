@@ -57,14 +57,16 @@ sub reply_handler {
   my $data        = $config_base->{data};
 
   my (@ans, @auth, @add);
-  
+
+  my $data_label = $data->{$label} || {};
+
   # TODO: support the groups stuff for cnames
-  if ($data->{$label}->{cname}) {
+  if ($data_label->{cname}) {
       push @ans, Net::DNS::RR->new(
                                    name => $domain,
                                    ttl  => $config_base->{ttl},
                                    type => 'CNAME',
-                                   address => $data->{$label}->{cname},
+                                   address => $data_label->{cname},
                                   );
       return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
@@ -75,8 +77,11 @@ sub reply_handler {
   # TODO: figure out when this is necessary
   push @add,  @{ ($self->_get_ns_records($config_base))[1] };
 
+  # TODO: this isn't quite right; the ANSWER section should only have a SOA record
+  # when we really have one -- in other cases send back NOERROR, empty ANSWER and 
+  # the SOA in the AUTHORITY section
   if ($query_type eq 'SOA' or ($query_type eq 'ANY' and $label eq '')) {
-      my $soa = $data->{$label}->{soa} || $data->{''}->{soa};
+      my $soa = $data_label->{soa} || $data->{''}->{soa};
       push @ans, $soa if $soa;
   }
 
@@ -90,9 +95,11 @@ sub reply_handler {
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
 
-  if ($config_base->{data}->{$label}) {
+  if ($data->{$label}) {
 
-    my @hosts;
+     #warn Data::Dumper->Dump([\$data_label], [qw(data_label)]);
+
+     my @hosts;
     if ($query_type =~ m/^(A|ANY|TXT)$/x) {
       my (@groups) = $self->pick_groups($config_base, $peer_host, $label);
       for my $group (@groups) { 
@@ -138,8 +145,7 @@ sub reply_handler {
     push @ans, grep { $_->address eq $config_base->{data}->{''}->{ns}->{$domain} } @{ ($self->_get_ns_records($config_base))[1] };
     @add = grep { $_->address ne $config_base->{data}->{''}->{ns}->{$domain} } @add;
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
- }
-
+  }
   elsif ($domain =~ m/^status\.\Q$base\E$/x) {
     my $uptime = (time - $stats->{started}) || 1;
     # TODO: convert to 2w3d6h format ...
