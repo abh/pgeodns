@@ -14,20 +14,20 @@ ok(($soa) = ($g->_get_soa_record($g->config('some.example.com.'))), "get_soa_rec
 is($soa->mname, 'ns1.some', 'mname - some.example.com');
 
 ok(my @ans = $g->reply_handler("some.example.com", "IN", "SOA", "192.168.0.10"), "reply_handler test");
-warn Data::Dumper->Dump([\@ans], [qw(ans)]);
 is($ans[1]->[0] && $ans[1]->[0]->mname, 'ns1.some', 'correct soa mname');
 
 ok(@ans = $g->reply_handler("some.example.com", "IN", "ANY", "192.168.0.10"), "reply_handler test - ANY");
-ok((($soa) = grep { $_->type eq 'SOA' } @{$ans[1]}), 'parse soa record from replies');
+ok((($soa) = grep { $_->type eq 'SOA' } @{$ans[1]}), 'parse soa record from basic reply');
 is( $soa && $soa->mname, 'ns1.some', 'correct soa mname from ANY request');
 
 ok(my @ans = $g->reply_handler("subzone.some.example.com", "IN", "SOA", "192.168.0.10"), "reply_handler SOA, subzone");
-ok((($soa) = grep { $_->type eq 'SOA' } @{$ans[1]}), 'parse soa record from replies');
+ok(!@{ $ans[1] }, 'should not get any answer records back');
+ok((($soa) = grep { $_->type eq 'SOA' } @{$ans[2]}), 'parse soa record from authority section (SOA request)');
 is( $soa && $soa->mname, 'ns1.some', 'correct soa mname from ANY request');
 
 ok(@ans = $g->reply_handler("subzone.some.example.com", "IN", "ANY", "192.168.0.10"), "reply_handler test SOA - ANY");
-ok(!@{ $ans[1] }, 'should not get any records back');
-ok((($soa) = grep { $_->type eq 'SOA' } @{$ans[2]}), 'parse soa record from authority section');
+ok(!@{ $ans[1] }, 'should not get any answer records back');
+ok((($soa) = grep { $_->type eq 'SOA' } @{$ans[2]}), 'parse soa record from authority section (ANY request)');
 is( $soa && $soa->mname, 'ns1.some', 'correct soa mname from ANY request');
 
 
