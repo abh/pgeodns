@@ -59,6 +59,7 @@ sub reply_handler {
   my (@ans, @auth, @add);
 
   my $data_label = $data->{$label} || {};
+  my $ttl = ($data_label->{ttl} || $config_base->{ttl});
 
   #warn Data::Dumper->Dump([\$data_label], [qw(data_label)]);
 
@@ -66,7 +67,7 @@ sub reply_handler {
   if ($data_label->{cname}) {
       push @ans, Net::DNS::RR->new(
                                    name  => $domain,
-                                   ttl   => $config_base->{ttl},
+                                   ttl   => $ttl,
                                    type  => 'CNAME',
                                    cname => $data_label->{cname},
                                   );
@@ -114,7 +115,7 @@ sub reply_handler {
       for my $host (@hosts) {
           push @ans, Net::DNS::RR->new(
                                        name => $domain,
-                                       ttl => $config_base->{ttl},
+                                       ttl  => $ttl,
                                        type => 'A',
                                        address => $host->{ip}
                                        );
@@ -125,7 +126,7 @@ sub reply_handler {
       for my $host (@hosts) {
           push @ans, Net::DNS::RR->new(
                                        name => $domain,
-                                       ttl => $config_base->{ttl},
+                                       ttl  => $ttl,
                                        type => 'TXT',
                                        txtdata => ($host->{ip} eq $host->{name} 
                                                    ? "$host->{ip}-$host->{weight}"

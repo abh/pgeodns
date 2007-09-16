@@ -13,6 +13,10 @@
     },
     "www": {
       "cname": "geo.bitnames.com"
+    },
+    "cname-long-ttl": {
+      "cname": "geo.bitnames.com",
+      "ttl": 86400
     }
   }
 }
