@@ -39,10 +39,11 @@ my $ns = Net::DNS::Nameserver->new
   (
    LocalPort    => 53,
    LocalAddr    => $localaddr,
-   ReplyHandler => sub { my @reply = $g->reply_handler(@_);
-			 #warn Data::Dumper->Dump([\@reply], [qw(reply)]);
-			 @reply
-		     },
+   ReplyHandler => sub { 
+       my @reply = $g->reply_handler(@_);
+       #warn Data::Dumper->Dump([\@reply], [qw(reply)]);
+       @reply
+       },
    Verbose      => $opts{verbose},
   );
 

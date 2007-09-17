@@ -36,11 +36,7 @@ sub config {
 sub reply_handler {
   my $self = shift;
 
-  warn "reply handler 10" if $self->{debug};
-
   $self->check_config();
-
-  warn "reply handler 20" if $self->{debug};
 
   my ($domain, $query_class, $query_type, $peer_host) = @_;
   $domain = lc $domain . '.';
@@ -451,7 +447,7 @@ sub check_config {
   cluck 'No "first_file' unless $first_file;
   #return unless $first_file;
   for my $file (@{$self->config->{files}}) {
-    do { load_config($first_file); last }
+    do { $self->load_config($first_file); last }
       if (stat($file->[0]))[9] != $file->[1]
   }
   return 1;
