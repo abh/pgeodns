@@ -36,7 +36,11 @@ sub config {
 sub reply_handler {
   my $self = shift;
 
+  warn "reply handler 10" if $self->{debug};
+
   $self->check_config();
+
+  warn "reply handler 20" if $self->{debug};
 
   my ($domain, $query_class, $query_type, $peer_host) = @_;
   $domain = lc $domain . '.';
