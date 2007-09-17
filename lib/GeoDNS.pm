@@ -444,6 +444,7 @@ sub check_config {
   my $self = shift;
   return unless time >= ($self->config->{last_config_check} + 30);
   my ($first_file) = (@{$self->config->{files}})[0];
+  $first_file = $first_file && $first_file->[0];
   cluck 'No "first_file' unless $first_file;
   #return unless $first_file;
   for my $file (@{$self->config->{files}}) {
