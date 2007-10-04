@@ -9,10 +9,14 @@ use Carp qw(cluck confess);
 use JSON qw();
 use Data::Dumper;
 
-our $VERSION  = '1.1';
+our $VERSION  = '1.10';
 our $REVISION = ('$Rev$' =~ m/(\d+)/x)[0];
 my $HeadURL = ('$HeadURL$'
                  =~ m!(?:https?:/?)?(/[^/]+.*)(?:/lib.*)!x)[0];
+
+# For the benefit of non-SVN checkouts
+$REVISION ||= '';
+$HeadURL  ||= '';
 
 my $gi = Geo::IP->new(GEOIP_STANDARD);
 
