@@ -104,18 +104,23 @@ sub reply_handler {
 
   if ($data->{$label}) {
 
-    my @hosts;
-    if ($query_type =~ m/^(A|ANY|TXT)$/x) {
+    my (@v4hosts, @v6hosts);
+    if ($query_type =~ m/^(A|AAAA|ANY|TXT)$/x) {
       my (@groups) = $self->pick_groups($config_base, $peer_host, $label);
       for my $group (@groups) { 
-	push @hosts, $self->pick_hosts($config_base, $group);
-	last if @hosts; 
+	push @v4hosts, $self->pick_hosts($config_base, $group, 'a');
+	last if @v4hosts; 
+	  # add ">= 2" to force at least two hosts even if the second one won't be as local 
+      }
+      for my $group (@groups) { 
+	push @v6hosts, $self->pick_hosts($config_base, $group, 'aaaa');
+	last if @v6hosts; 
 	  # add ">= 2" to force at least two hosts even if the second one won't be as local 
       }
     }
     
     if ($query_type eq 'A' or $query_type eq 'ANY') {
-      for my $host (@hosts) {
+      for my $host (@v4hosts) {
           push @ans, Net::DNS::RR->new(
                                        name => $domain,
                                        ttl  => $ttl,
@@ -125,8 +130,19 @@ sub reply_handler {
       }
     } 
 
+    if ($query_type eq 'AAAA' or $query_type eq 'ANY') {
+      for my $host (@v6hosts) {
+          push @ans, Net::DNS::RR->new(
+                                       name => $domain,
+                                       ttl  => $ttl,
+                                       type => 'AAAA',
+                                       address => $host->{ip}
+                                       );
+      }
+    } 
+
     if ($query_type eq 'TXT' or $query_type eq 'ANY') {
-      for my $host (@hosts) {
+      for my $host (@v4hosts, @v6hosts) {
           push @ans, Net::DNS::RR->new(
                                        name => $domain,
                                        ttl  => $ttl,
@@ -219,29 +235,32 @@ sub pick_groups {
 }
 
 sub pick_hosts {
-  my ($self, $config_base, $group_name) = @_;
+  my ($self, $config_base, $group_name, $qtype) = @_;
 
   my $group = $config_base->{data}->{$group_name};
-  return unless $group and $group->{a};
+  return unless $group and $group->{$qtype};
 
   my @answer;
   my $max = $config_base->{max_hosts} || 2;
 
   my $loop = 0;
 
-  unless ($group->{total_weight}) {
+  unless ($group->{'total_weight' . $qtype}) {
       # find total weight;
       my $total = 0;
       my @servers = ();
-      for (sort { $a->[1] <=> $b->[1] } @{$group->{a}}) {
+      for (sort { $a->[1] <=> $b->[1] } @{$group->{$qtype}}) {
           $total += $_->[1];
+	  # Normalization will do nothing if there is no colon 
+	  # in the host name
+	  $_->[0] = _normalize_AAAA($_->[0]);
           push @servers, [0,$_];
       }
-      $group->{servers} = \@servers;
-      $group->{total_weight} = $total;
+      $group->{'servers' . $qtype} = \@servers;
+      $group->{'total_weight' . $qtype} = $total;
   }
 
-  my $total_weight = $group->{total_weight};
+  my $total_weight = $group->{'total_weight' . $qtype};
 
   #warn Data::Dumper->Dump([\{$group->{servers}}], [qw(servers)]);
 
@@ -253,7 +272,7 @@ sub pick_hosts {
     my $n = int(rand( $total_weight ));
     my $host;
     my $total = 0;
-    for (@{$group->{servers}}) {
+    for (@{$group->{'servers' . $qtype}}) {
         next if $_->[0];
         $total += $_->[1]->[1];
         if ($total > $n) {
@@ -267,8 +286,15 @@ sub pick_hosts {
 
     my $hostname = $host->[0];
 
-    my $ip = $hostname =~ m/^\d{1,3}(.\d{1,3}){3}$/x ? $hostname : $config_base->{hosts}->{$hostname}->{ip};
-
+    my $ip;
+    if ($hostname =~ m/^\d{1,3}(.\d{1,3}){3}$/x) {
+	$ip = $hostname;
+    } elsif ($hostname =~ m/:/x) {
+	$ip = $hostname;
+    } else {
+	$ip = $config_base->{hosts}->{$hostname}->{ip};
+    }
+	
     push @answer, ({ name => $hostname, ip => $ip, weight => $host->[1] });
   }
 
@@ -432,11 +458,16 @@ sub _read_config {
       my ($host, $ip, $groups) = split(/\s+/,$_,3);
       die "Bad configuration line: [$_]\n" unless $groups;
       $host = "$host." unless $host =~ m/\.$/;
+      my $rtype = "a";
+      if ($ip =~ m/:/){ 
+	  $rtype = "aaaa";
+      }
       $config_base->{hosts}->{$host} = { ip => $ip };
       for my $group_name (split /\s+/, $groups) {
 	$group_name = '' if $group_name eq '@';
-	$config_base->{data}->{$group_name}->{a} ||= [];
-	push @{$config_base->{data}->{$group_name}->{a}}, [ $host, 1 ];
+	# Add the host to it's group, according to querty type
+	$config_base->{data}->{$group_name}->{$rtype} ||= [];
+	push @{$config_base->{data}->{$group_name}->{$rtype}}, [ $host, 1 ];
       }
     }
   }
@@ -457,6 +488,33 @@ sub check_config {
   }
   return 1;
 }
+
+sub _normalize_AAAA {
+    # This is taken from DNS::RR::AAAA::new_from_string
+    # Unfortunately, AAAA.pm does not perform this algorithm
+    # for records created from a hash
+    my $string = shift;
+    if ($string =~ /^(.*):(\d+)\.(\d+)\.(\d+)\.(\d+)$/) {
+	my ($front, $a, $b, $c, $d) = ($1, $2, $3, $4, $5);
+	$string = $front . sprintf(":%x:%x",
+				   ($a << 8 | $b),
+				   ($c << 8 | $d));
+    }
+			
+    if ($string =~ /^(.*)::(.*)$/) {
+	my ($front, $back) = ($1, $2);
+	my @front = split(/:/, $front);
+	my @back  = split(/:/, $back);
+	my $fill = 8 - (@front ? $#front + 1 : 0)
+	    - (@back  ? $#back  + 1 : 0);
+	my @middle = (0) x $fill;
+	my @addr = (@front, @middle, @back);
+	$string = sprintf("%x:%x:%x:%x:%x:%x:%x:%x",
+			  map { hex $_ } @addr);
+    }
+    return $string;
+}
+
 
 1;
 

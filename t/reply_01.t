@@ -10,6 +10,9 @@ ok($g->load_config('t/replies.conf'), "load_config");
 ok(@ans = $g->reply_handler("foo.example.com", "IN", "A", "192.168.0.10"), "get basic reply");
 like($ans[1]->[0]->address, qr/192.168.1.[234]/, 'correct A record came back');
 
+ok(@ans = $g->reply_handler("foo.example.com", "IN", "AAAA", "192.168.0.10"), "get basic reply");
+like($ans[1]->[1]->address, qr/fd06:c1d3:e902:.*:.*:.*:.*/, 'correct AAAA record came back');
+
 ok(@ans = $g->reply_handler("foo.example.com", "IN", "ANY", "192.168.0.10"), "ANY request");
 like((map { $_->address } grep { $_->type eq 'A' } @{ $ans[1] })[0], qr/192.168.1.[234]/, 'correct A record came back');
 
