@@ -156,7 +156,7 @@ sub reply_handler {
     # TODO: convert to 2w3d6h format ...
     my $status = sprintf '%s, upt: %i, q: %i, %.2f/qps',
       $self->{interface}, $uptime, $stats->{queries}, $stats->{queries}/$uptime;
-      warn Data::Dumper->Dump([\$stats], [qw(stats)]);
+    #  warn Data::Dumper->Dump([\$stats], [qw(stats)]);
     push @ans, Net::DNS::RR->new("$domain. 1 IN TXT '$status'") if $query_type eq 'TXT' or $query_type eq 'ANY';
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
@@ -338,7 +338,7 @@ sub load_config {
 
     $config_base->{data}->{''}->{soa} = $self->_get_soa_record($config_base);
 
-    warn Data::Dumper->Dump([\$config_base], [qw(config_base)]);
+    #warn Data::Dumper->Dump([\$config_base], [qw(config_base)]);
   }
 
   
@@ -385,7 +385,7 @@ sub _read_config {
           push @{ $config->{files} }, [$json_file, (stat($json_file))[9]];
           my $json = eval { local $/ = undef; <$json_fh> };
           close $json_fh;
-          $config->{bases}->{$base_name} = JSON::jsonToObj($json);
+          $config->{bases}->{$base_name} = JSON::from_json($json);
       }
       $config->{bases}->{$base_name}->{base} = $base_name;
       next;

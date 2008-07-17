@@ -2,6 +2,7 @@ use Test::More qw(no_plan);
 use strict;
 use_ok('GeoDNS');
 ok(my $g = GeoDNS->new, "new");
+diag("The follow test should warn about a file not found.  No need to be alarmed.");
 ok($g->load_config('t/json_config.conf'), "load_config");
 
 ok(my ($ans, $add) = ($g->_get_ns_records($g->config('example.com.'))), "get_ns_records - example.com");
