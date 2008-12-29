@@ -10,13 +10,12 @@ use JSON qw();
 use Data::Dumper;
 
 our $VERSION  = '1.10';
-our $REVISION = ('$Rev$' =~ m/(\d+)/x)[0];
-my $HeadURL = ('$HeadURL$'
-                 =~ m!(?:https?:/?)?(/[^/]+.*)(?:/lib.*)!x)[0];
 
-# For the benefit of non-SVN checkouts
-$REVISION ||= '';
-$HeadURL  ||= '';
+my $git;
+
+if (-e ".git") {
+    $git = `git describe`;
+}
 
 my $gi = Geo::IP->new(GEOIP_STANDARD);
 
@@ -29,6 +28,11 @@ sub new {
   $args{stats}->{started} = time;
 
   return bless \%args, $class;
+}
+
+sub version_full {
+    my $self = shift;
+    return "$self->{interface}, v$VERSION" . ($git ? "/$git" : "");
 }
 
 sub config {
@@ -161,7 +165,7 @@ sub reply_handler {
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
   elsif ($domain =~ m/^version\.\Q$base\E$/x) {
-    my $version = "$self->{interface}, v$VERSION/$REVISION $HeadURL";
+    my $version = $self->version_full;
     push @ans, Net::DNS::RR->new("$domain. 1 IN TXT '$version'") if $query_type eq 'TXT' or $query_type eq 'ANY';
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
@@ -508,6 +512,11 @@ Called automatically from the reply_handler.
 =item find_base($name)
 
 Given a domain name, returns the longest matching configured "base".
+
+=item version_full
+
+Returns a string with the interface, version number and git commit (if run from a
+git checkout).
 
 =back
 

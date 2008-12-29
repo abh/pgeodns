@@ -33,7 +33,7 @@ if ($localaddr =~ /[^\d\.]/) {
     $localaddr = $addr;
 }
 
-print "\nStarting GeoDNS $GeoDNS::VERSION/$GeoDNS::REVISION on $localaddr\n";
+printf "\nStarting GeoDNS %s\n", $g->version_full;
 
 my $ns = Net::DNS::Nameserver->new
   (
