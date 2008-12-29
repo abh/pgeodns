@@ -16,13 +16,15 @@ GetOptions (\%opts,
 	    'interface=s',
 	    'user=s',
 	    'verbose!',
+            'config=s',
 	   ) or die "invalid options";
 
 die "--interface [ip|hostname] required\n" unless $opts{interface};
 die "--user [user|uid] required\n" unless $opts{user};
 
-my $g = GeoDNS->new(interface => $opts{interface},
-                    debug     => 1,
+my $g = GeoDNS->new(interface   => $opts{interface},
+                    debug       => 1,
+                    config_file => $opts{config},
                    );
 
 my $localaddr = $opts{interface};
@@ -56,7 +58,7 @@ $uid = getpwnam($uid) or die "could not lookup uid"
 
 setuid($uid) or die "could not setuid: $!";
 
-$g->load_config('pgeodns.conf');
+$g->load_config($opts{config} || 'pgeodns.conf');
 
 if ($ns) {
   $ns->main_loop;
@@ -92,6 +94,10 @@ The interface to bind to.
 =item --user [user / uid]
 
 The username or uid to run as after binding to port 53.
+
+=item --config [config file]
+
+Base configuration file; defaults to ./pgeodns.conf
 
 =item --verbose
 
