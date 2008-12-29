@@ -145,7 +145,7 @@ sub reply_handler {
       }
     } 
 
-    @auth = ($self->_get_soa_record($config_base)) unless @ans;
+    @auth = (_get_soa_record($config_base)) unless @ans;
 
     # mark the answer as authoritive (by setting the 'aa' flag
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
@@ -172,7 +172,7 @@ sub reply_handler {
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
   }
   else {
-    @auth = $self->_get_soa_record($config_base);
+    @auth = _get_soa_record($config_base);
     return ('NXDOMAIN', [], \@auth, [], { aa => 1 });
   }
 
@@ -194,7 +194,7 @@ sub _get_ns_records {
 }
 
 sub _get_soa_record {
-  my ($self, $config_base) = @_;
+  my $config_base = shift;
   return Net::DNS::RR->new
     ("$config_base->{base}. 3600 IN SOA $config_base->{primary_ns};
       support.bitnames.com. $config_base->{serial} 5400 5400 2419200 $config_base->{ttl}");
@@ -305,6 +305,19 @@ sub load_config {
   my $self     = shift;
   my $filename = shift or confess "load_config requires a filename";
 
+  my $config = eval { _load_config($filename) };
+  if (my $err = $@) {
+      warn "Configuration error: $err";
+      return 0;
+  }
+  $self->{config} = $config if $config;
+
+  return 1;
+}
+
+sub _load_config {
+  my $filename = shift;
+
   my $config = {};
   $config->{last_config_check} = time;
   $config->{files} = [];
@@ -342,21 +355,18 @@ sub load_config {
 
     warn "LEGACY DATA - NOT SUPPORTED - 'groups' configured for $base\n" if $config_base->{groups};
 
-    $config_base->{data}->{''}->{soa} = $self->_get_soa_record($config_base);
+    $config_base->{data}->{''}->{soa} = _get_soa_record($config_base);
 
     #warn Data::Dumper->Dump([\$config_base], [qw(config_base)]);
   }
 
-  
-  
-
   # use Data::Dumper;
   # warn Data::Dumper->Dump([\$config], [qw(config)]);
-
-  $self->{config} = $config;
-
-  return 1;
+    
+  return $config;
 }
+
+  
 
 my @config_file_stack;
 
@@ -365,7 +375,7 @@ sub _read_config {
   my $file = shift;
 
   if (grep {$_ eq $file} @config_file_stack) {
-    die "Oops, recursive inclusion of $file - parent(s): ", join ', ', @config_file_stack;
+    die "Recursive inclusion of $file - parent(s): ", join ', ', @config_file_stack;
   }
 
   open my $fh, '<', $file

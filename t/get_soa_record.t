@@ -4,13 +4,13 @@ use_ok('GeoDNS');
 ok(my $g = GeoDNS->new, "new");
 ok($g->load_config('t/get_ns_records.conf'), "load_config");
 
-ok(my ($soa) = ($g->_get_soa_record($g->config('example.com.'))), "get_soa_record - example.com");
+ok(my ($soa) = (GeoDNS::_get_soa_record($g->config('example.com.'))), "get_soa_record - example.com");
 is($soa->mname, 'ns1.default', 'mname - example.com');
 
-ok(($soa) = ($g->_get_soa_record($g->config('example.net.'))), "get_soa_record - example.net");
+ok(($soa) = (GeoDNS::_get_soa_record($g->config('example.net.'))), "get_soa_record - example.net");
 is($soa->mname, 'ns2.default', 'mname - example.net');
 
-ok(($soa) = ($g->_get_soa_record($g->config('some.example.com.'))), "get_soa_record - some.example.com");
+ok(($soa) = (GeoDNS::_get_soa_record($g->config('some.example.com.'))), "get_soa_record - some.example.com");
 is($soa->mname, 'ns1.some', 'mname - some.example.com');
 
 ok(my @ans = $g->reply_handler("some.example.com", "IN", "SOA", "192.168.0.10"), "reply_handler test");
