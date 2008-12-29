@@ -19,6 +19,8 @@ if (-e ".git") {
 
 my $gi = Geo::IP->new(GEOIP_STANDARD);
 
+my $json = JSON->new->relaxed(1);
+
 sub new {
   my $class = shift;
   my %args  = @_;
@@ -387,9 +389,9 @@ sub _read_config {
       if ($json_file) {
           open my $json_fh, '<', $json_file or warn "Could not open $json_file: $!\n" and next;
           push @{ $config->{files} }, [$json_file, (stat($json_file))[9]];
-          my $json = eval { local $/ = undef; <$json_fh> };
+          my $data = eval { local $/ = undef; <$json_fh> };
           close $json_fh;
-          $config->{bases}->{$base_name} = JSON::from_json($json);
+          $config->{bases}->{$base_name} = $json->decode($data);
       }
       $config->{bases}->{$base_name}->{base} = $base_name;
       next;
