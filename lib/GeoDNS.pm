@@ -522,6 +522,6 @@ git checkout).
 
 =head1 COPYRIGHT
 
-Copyright 2004-2007 Ask Bjoern Hansen and Develooper LLC.  This work
+Copyright 2001-2009 Ask Bjoern Hansen and Develooper LLC.  This work
 is distributed under the Apache License 2.0 (see the F<LICENSE> file
 for more details).
