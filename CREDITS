@@ -1,0 +1,11 @@
+Robert Spier told me to use Net::DNS::Nameserver and made a buggy
+skeleton server. :-)
+
+Mark Andrews <Mark_Andrews@isc.org> pointed out several bugs and
+mistakes in some of the replies the server sent.
+
+Guillaume Filion fixed bugs and experimented with using BGP data
+intead of Geo::IP.
+
+MaxMind (http://www.maxmind.com/) provides us with excellent geo data
+and open source libraries to access it.

@@ -1,0 +1,22 @@
+{ "serial": 1,
+  "ttl":    600,
+  "data" : {
+    "":  { "ns": { "ns1.example.net": null, "ns2.example.net": null } },
+    "foo": { 
+      "a": [ [ "192.168.1.2", 10 ], [ "192.168.1.3", 10 ], [ "192.168.1.4", 10 ] ]
+    },
+    "weight": { 
+      "a": [ [ "192.168.1.2", 100 ], [ "192.168.1.3", 50 ], [ "192.168.1.4", 25 ] ]
+    },
+    "bar": {
+      "alias": "foo"
+    },
+    "www": {
+      "cname": "geo.bitnames.com"
+    },
+    "cname-long-ttl": {
+      "cname": "geo.bitnames.com",
+      "ttl": 86400
+    }
+  }
+}

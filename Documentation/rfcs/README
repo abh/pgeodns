@@ -1,0 +1,10 @@
+
+More at http://www.dns.net/dnsrd/rfc/
+
+rfc1034: Domain names - concepts 
+rfc1035: Domain names - implementation and specification 
+rfc2052: A DNS RR for specifying the location of services (DNS SRV)
+rfc2181: Clarifications
+rfc3492: Punycode
+rfc3596: AAAA records
+
