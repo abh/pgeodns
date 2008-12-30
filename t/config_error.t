@@ -17,6 +17,6 @@ is($g->config->{bases}->{"geosearch.perl.org."}->{serial}, 3, "kept old configur
 
 exit;
 
-my $c = $g->config;
-use Data::Dump qw(dump);
-dump($c);
+#my $c = $g->config;
+#use Data::Dump qw(dump);
+#dump($c);
