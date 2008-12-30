@@ -1,3 +1,11 @@
+1.20 - December 30, 2008
+
+   - If new configuration can't be loaded; keep the old one
+   - Allow 'relaxed' JSON in config files (trailing commas and comments)
+   - Add --config option to pgeodns.pl
+   - Updated to work with new JSON.pm (Steve Peters)
+   - Fix some excessive debug output and other small tweaks (Steve Peters)
+   - Move to git
 
 1.10 - October 4, 2007
 

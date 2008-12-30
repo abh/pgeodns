@@ -18,6 +18,7 @@ pgeodns.conf
 pgeodns.pl
 sync_config.sh
 t/countries.t
+t/config_error.t
 t/default_serial.t
 t/example.com.json
 t/find_base.conf

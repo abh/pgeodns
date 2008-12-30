@@ -1,15 +1,15 @@
 package GeoDNS;
 use strict;
 use warnings;
-use Net::DNS qw(0.60);
+use Net::DNS '0.60';
 use Countries qw(continent);
 use Geo::IP;
 use List::Util qw/max shuffle/;
 use Carp qw(cluck confess);
-use JSON qw();
+use JSON '2.0';
 use Data::Dumper;
 
-our $VERSION  = '1.10';
+our $VERSION  = '1.20';
 
 my $git;
 
