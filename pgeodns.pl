@@ -13,11 +13,11 @@ use Socket;
 
 my %opts = (verbose => 0);
 GetOptions (\%opts,
-	    'interface=s',
-	    'user=s',
-	    'verbose!',
+            'interface=s',
+            'user=s',
+            'verbose!',
             'config=s',
-	   ) or die "invalid options";
+           ) or die "invalid options";
 
 die "--interface [ip|hostname] required\n" unless $opts{interface};
 die "--user [user|uid] required\n" unless $opts{user};
@@ -41,7 +41,7 @@ my $ns = Net::DNS::Nameserver->new
   (
    LocalPort    => 53,
    LocalAddr    => $localaddr,
-   ReplyHandler => sub { 
+   ReplyHandler => sub {
        my @reply = $g->reply_handler(@_);
        #warn Data::Dumper->Dump([\@reply], [qw(reply)]);
        @reply
@@ -110,7 +110,6 @@ Print even more status output.
 pgeodns.conf in the current directory.  Review it and the included
 samples in config/* until it gets documented. :-)
 
-    
 =head1 REFERENCES
 
 RFC2308  http://www.faqs.org/rfcs/rfc2308.html
