@@ -17,7 +17,14 @@ GetOptions (\%opts,
             'user=s',
             'verbose!',
             'config=s',
+            'configtest!'
            ) or die "invalid options";
+
+
+my $config_file = $opts{config} || 'pgeodns.conf';
+
+exit !GeoDNS::load_config({},$config_file)
+  if $opts{configtest};
 
 die "--interface [ip|hostname] required\n" unless $opts{interface};
 die "--user [user|uid] required\n" unless $opts{user};
@@ -58,7 +65,7 @@ $uid = getpwnam($uid) or die "could not lookup uid"
 
 setuid($uid) or die "could not setuid: $!";
 
-$g->load_config($opts{config} || 'pgeodns.conf');
+$g->load_config($config_file);
 
 if ($ns) {
   $ns->main_loop;
