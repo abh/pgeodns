@@ -1,7 +1,7 @@
 package GeoDNS;
 use strict;
 use warnings;
-use Net::DNS '0.60';
+use Net::DNS '0.64';
 use Countries qw(continent);
 use Geo::IP;
 use List::Util qw/max shuffle/;
