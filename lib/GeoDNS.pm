@@ -81,7 +81,7 @@ sub reply_handler {
                                    cname => $data_label->{cname},
                                   );
       #warn Data::Dumper->Dump([\@ans], [qw(answer)]);
-      return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
+      return ('NOERROR', \@ans, \@auth, \@add, { aa => 1, opcode => '' });
   }
 
   # we don't need an authority section
@@ -105,7 +105,7 @@ sub reply_handler {
       push @ans, @{ ($self->_get_ns_records($config_base))[0] };
       push @add, @{ ($self->_get_ns_records($config_base))[1] };
     }
-    return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
+    return ('NOERROR', \@ans, \@auth, \@add, { aa => 1, opcode => '' });
   }
 
   if ($data->{$label}) {
@@ -148,14 +148,14 @@ sub reply_handler {
     @auth = (_get_soa_record($config_base)) unless @ans;
 
     # mark the answer as authoritive (by setting the 'aa' flag
-    return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
+    return ('NOERROR', \@ans, \@auth, \@add, { aa => 1, opcode => '' });
 
   }
   # TODO: these should be converted to A records during the configuration phase
   elsif ($config_base->{data}->{''}->{ns}->{$domain}) {
     push @ans, grep { $_->address eq $config_base->{data}->{''}->{ns}->{$domain} } @{ ($self->_get_ns_records($config_base))[1] };
     @add = grep { $_->address ne $config_base->{data}->{''}->{ns}->{$domain} } @add;
-    return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
+    return ('NOERROR', \@ans, \@auth, \@add, { aa => 1, opcode => '' });
   }
   elsif ($domain =~ m/^status\.\Q$base\E$/x) {
     my $uptime = (time - $stats->{started}) || 1;
@@ -164,16 +164,16 @@ sub reply_handler {
       $self->{interface}, $uptime, $stats->{queries}, $stats->{queries}/$uptime;
     #  warn Data::Dumper->Dump([\$stats], [qw(stats)]);
     push @ans, Net::DNS::RR->new("$domain. 1 IN TXT '$status'") if $query_type eq 'TXT' or $query_type eq 'ANY';
-    return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
+    return ('NOERROR', \@ans, \@auth, \@add, { aa => 1, opcode => '' });
   }
   elsif ($domain =~ m/^version\.\Q$base\E$/x) {
     my $version = $self->version_full;
     push @ans, Net::DNS::RR->new("$domain. 1 IN TXT '$version'") if $query_type eq 'TXT' or $query_type eq 'ANY';
-    return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
+    return ('NOERROR', \@ans, \@auth, \@add, { aa => 1, opcode => '' });
   }
   else {
     @auth = _get_soa_record($config_base);
-    return ('NXDOMAIN', [], \@auth, [], { aa => 1 });
+    return ('NXDOMAIN', [], \@auth, [], { aa => 1, opcode => '' });
   }
 
 }
