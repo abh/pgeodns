@@ -6,7 +6,7 @@ use Countries qw(continent);
 use Geo::IP;
 use List::Util qw/max shuffle/;
 use Carp qw(cluck confess);
-use JSON '2.0';
+use JSON '2.12';
 use Data::Dumper;
 
 our $VERSION  = '1.20';
