@@ -186,7 +186,7 @@ sub _get_ns_records {
   my $data = $config_base->{data}->{''};
 
   for my $ns (keys %{ $data->{ns} }) {
-    push @ans, Net::DNS::RR->new("$base 86400 IN NS $ns.");
+    push @ans, Net::DNS::RR->new("$base 86400 IN NS $ns");
     push @add, Net::DNS::RR->new("$ns. 86400 IN A $data->{ns}->{$ns}")
       if $data->{ns}->{$ns};
   }

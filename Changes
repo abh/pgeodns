@@ -1,3 +1,6 @@
+
+   - Update tests to work with Net::DNS 0.64+
+
 1.21 - February 14, 2009
 
    - Require newer versions of Net::DNS and JSON modules
