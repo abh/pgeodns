@@ -1,3 +1,4 @@
+1.21 - February 14, 2009
 
    - Require newer versions of Net::DNS and JSON modules
    - Add --configtest option to test a configuration file (Robert Spier)
