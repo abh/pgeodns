@@ -239,7 +239,7 @@ sub pick_hosts {
       # find total weight;
       my $total = 0;
       my @servers = ();
-      for (sort { $a->[1] <=> $b->[1] } @{$group->{a}}) {
+      for (sort { $b->[1] <=> $a->[1] } @{$group->{a}}) {
           $total += $_->[1];
           push @servers, [0,$_];
       }
