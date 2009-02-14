@@ -30,7 +30,7 @@ exit !GeoDNS::load_config({},$config_file)
   if $opts{configtest};
 
 die "--interface [ip|hostname] required\n" unless $opts{interface};
-die "--user [user|uid] required\n" unless $opts{user};
+die "--user [user|uid] required\n" if $> ==0 and !$opts{user};
 
 my $g = GeoDNS->new(interface   => $opts{interface},
                     debug       => 1,
@@ -63,11 +63,11 @@ my $ns = Net::DNS::Nameserver->new
 # print error?
 die "couldn't create nameserver object\n" unless $ns;
 
-my $uid = $opts{user};
-$uid = getpwnam($uid) or die "could not lookup uid"
- if $uid =~ m/\D/;
-
-setuid($uid) or die "could not setuid: $!";
+if (my $uid = $opts{user}) {
+    $uid = getpwnam($uid) or die "could not lookup uid"
+        if $uid =~ m/\D/;
+    setuid($uid) or die "could not setuid: $!";
+}
 
 $g->load_config($config_file);
 
