@@ -1,3 +1,4 @@
+1.30 - February 14, 2009
 
    - Cache generated NS records
    - Optimize pick_hosts to be slightly faster when hosts have different weights
