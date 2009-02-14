@@ -178,6 +178,7 @@ sub reply_handler {
 
 }
 
+my %ns_cache;
 
 sub _get_ns_records {
   my ($self, $config_base) = @_;
@@ -186,8 +187,8 @@ sub _get_ns_records {
   my $data = $config_base->{data}->{''};
 
   for my $ns (keys %{ $data->{ns} }) {
-    push @ans, Net::DNS::RR->new("$base 86400 IN NS $ns");
-    push @add, Net::DNS::RR->new("$ns. 86400 IN A $data->{ns}->{$ns}")
+    push @ans, $ns_cache{"NS $ns"} ||= Net::DNS::RR->new("$base 86400 IN NS $ns");
+    push @add, $ns_cache{"A $ns"}  ||= Net::DNS::RR->new("$ns. 86400 IN A $data->{ns}->{$ns}")
       if $data->{ns}->{$ns};
   }
   return (\@ans, \@add);
