@@ -18,11 +18,13 @@ GetOptions (\%opts,
             'verbose!',
             'config=s',
             'configtest!',
-            'development!'
+            'development!',
+            'port=i',
            ) or die "invalid options";
 
 
 my $config_file = $opts{config} || 'pgeodns.conf';
+my $port = $opts{port} || 53;
 
 exit !GeoDNS::load_config({},$config_file)
   if $opts{configtest};
@@ -48,7 +50,7 @@ printf "\nStarting GeoDNS %s\n", $g->version_full;
 
 my $ns = Net::DNS::Nameserver->new
   (
-   LocalPort    => 53,
+   LocalPort    => $port,
    LocalAddr    => $localaddr,
    ReplyHandler => sub {
        my @reply = $g->reply_handler(@_);
