@@ -171,6 +171,10 @@ sub reply_handler {
     push @ans, Net::DNS::RR->new("$domain. 1 IN TXT '$version'") if $query_type eq 'TXT' or $query_type eq 'ANY';
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1, opcode => '' });
   }
+  elsif ($self->{development} and $domain =~ m/^shutdown\./) {
+    warn "Got shutdown query; shutting down";
+    exit;
+  }
   else {
     @auth = _get_soa_record($config_base);
     return ('NXDOMAIN', [], \@auth, [], { aa => 1, opcode => '' });

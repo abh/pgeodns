@@ -17,7 +17,8 @@ GetOptions (\%opts,
             'user=s',
             'verbose!',
             'config=s',
-            'configtest!'
+            'configtest!',
+            'development!'
            ) or die "invalid options";
 
 
@@ -32,6 +33,7 @@ die "--user [user|uid] required\n" unless $opts{user};
 my $g = GeoDNS->new(interface   => $opts{interface},
                     debug       => 1,
                     config_file => $opts{config},
+                    development => ($opts{development} ? 1 : 0),
                    );
 
 my $localaddr = $opts{interface};

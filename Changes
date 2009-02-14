@@ -2,6 +2,7 @@
    - Cache generated NS records
    - Optimize pick_hosts to be slightly faster when hosts have different weights
    - Work around bug printing warnings in Net::DNS 0.64 and 0.65
+   - Add --development switch with "shutdown query" to assist running Devel::NYTProf
    - Update tests to work with Net::DNS 0.64+
    - Require newer versions of Net::DNS and JSON modules
    - Add --configtest option to test a configuration file (Robert Spier)
