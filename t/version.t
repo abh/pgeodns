@@ -27,5 +27,8 @@ like($ans[1]->[0]->rdatastr, qr!v$GeoDNS::VERSION/!, 'got the version back');
 ok(@ans = $g->reply_handler("status.example.com", "IN", "ANY", "192.168.0.10"), "status request, any");
 like($ans[1]->[0]->rdatastr, qr!q: 4,!, 'four queries now');
 
+ok(@ans = $g->reply_handler("status.pgeodns", "CH", "TXT", "192.168.0.10"), "status request, ch class");
+like($ans[1]->[0]->rdatastr, qr!q: 5,!, 'five queries now');
+
 ok(@ans = $g2->reply_handler("status.example.com", "IN", "ANY", "192.168.0.10"), "status request, any");
 like($ans[1]->[0]->rdatastr, qr!q: 1,!, 'g2 has only done one query now');

@@ -1,3 +1,5 @@
+
+   - Respond to status and version queries in CH class on "pgeodns" zone
    - Only require --user option when started as root
    - Add --port option
 

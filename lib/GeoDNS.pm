@@ -163,12 +163,12 @@ sub reply_handler {
     my $status = sprintf '%s, upt: %i, q: %i, %.2f/qps',
       $self->{interface}, $uptime, $stats->{queries}, $stats->{queries}/$uptime;
     #  warn Data::Dumper->Dump([\$stats], [qw(stats)]);
-    push @ans, Net::DNS::RR->new("$domain. 1 IN TXT '$status'") if $query_type eq 'TXT' or $query_type eq 'ANY';
+    push @ans, Net::DNS::RR->new("$domain. 1 $query_class TXT '$status'") if $query_type eq 'TXT' or $query_type eq 'ANY';
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1, opcode => '' });
   }
   elsif ($domain =~ m/^version\.\Q$base\E$/x) {
     my $version = $self->version_full;
-    push @ans, Net::DNS::RR->new("$domain. 1 IN TXT '$version'") if $query_type eq 'TXT' or $query_type eq 'ANY';
+    push @ans, Net::DNS::RR->new("$domain. 1 $query_class TXT '$version'") if $query_type eq 'TXT' or $query_type eq 'ANY';
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1, opcode => '' });
   }
   elsif ($self->{development} and $domain =~ m/^shutdown\./) {
@@ -330,6 +330,17 @@ sub _load_config {
   _read_config( $config, $filename );
 
   delete $config->{base};
+  
+  $config->{bases}->{'pgeodns.'} = {
+                                 primary_ns => 'ns.pgeodns.',
+                                 serial     => 1,
+                                 ttl        => 1,
+                                 base       => 'pgeodns.',
+                                 data       => { '' => { ns => { 'ns.pgeodns.' => undef } },
+                                                 #'status'  => { txt => '__status__'  },
+                                                 #'version' => { txt => '__version__' },
+                                               },
+                                };
 
   # warn Data::Dumper->Dump([\$config], [qw(config)]);
 
