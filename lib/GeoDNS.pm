@@ -15,6 +15,7 @@ my $git;
 
 if (-e ".git") {
     $git = `git describe`;
+    chomp $git if $git;
 }
 
 my $gi = Geo::IP->new(GEOIP_STANDARD);

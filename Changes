@@ -1,3 +1,5 @@
+   - Remove newline from "git version" when running from a git clone
+
 1.31 - March 2, 2009
 
    - Respond to status and version queries in CH class on "pgeodns" zone
