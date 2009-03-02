@@ -1,3 +1,4 @@
+1.31 - March 2, 2009
 
    - Respond to status and version queries in CH class on "pgeodns" zone
    - Only require --user option when started as root
