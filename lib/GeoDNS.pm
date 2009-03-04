@@ -72,6 +72,12 @@ sub reply_handler {
   my $ttl = ($data_label->{ttl} || $config_base->{ttl});
 
   #warn Data::Dumper->Dump([\$data_label], [qw(data_label)]);
+  
+  if ($data_label->{alias}) {
+      $label = $data_label->{alias};
+      my $data_label = $data->{ $label } || {};
+      $ttl = ($data_label->{ttl} || $config_base->{ttl});
+  }
 
   # TODO: support the groups stuff for cnames
   if ($data_label->{cname}) {
