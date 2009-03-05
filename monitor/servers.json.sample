@@ -1,0 +1,12 @@
+{
+  "zones": [ "cpansearch.perl.org" ],
+
+  "servers": {
+                "63.251.223.184": { "name": "x17.dev" },
+                "78.153.203.28" : { "name": "s4b.eu"  },
+                "202.71.97.89"  : { "name": "Doubleukay (Malaysia)" },
+                "84.45.68.23"   : { "name": "eu1.dev" },
+                "70.85.157.108" : { "name": "p3.goingon" },
+                "212.12.50.229" : { "name": "ntppool.hanse.de" }, 
+             }
+}

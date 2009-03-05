@@ -1,0 +1,7 @@
+- Use RRDs, RRDp or rrdtool directly instead of RRD::Simple
+- Use higher resolution data in rrd file for longer
+- Occasionally fetch current version number
+- Option to check that the serial number is a recent timestamp
+- Generate HTML page with current data
+- Generate a small file that can be checked with nagios etc
+- Plot response time with query rate (does the response time go up during peaks?)
