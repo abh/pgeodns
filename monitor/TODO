@@ -5,3 +5,4 @@
 - Generate HTML page with current data
 - Generate a small file that can be checked with nagios etc
 - Plot response time with query rate (does the response time go up during peaks?)
+- Plot aggregate query numbers, too.
