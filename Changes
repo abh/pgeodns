@@ -1,3 +1,5 @@
+1.32 - March 17, 2009
+
    - Make re-loading the configuration after a config failure more robust
    - Support for "alias" records (basically an internal CNAME)
    - Remove newline from "git version" when running from a git clone
