@@ -333,6 +333,7 @@ sub _load_config {
   my $config = {};
   $config->{last_config_check} = time;
   $config->{files} = [];
+  $config->{config_file_stack} = [];
 
   _read_config( $config, $filename );
 
@@ -391,20 +392,18 @@ sub _load_config {
 
   
 
-my @config_file_stack;
-
 sub _read_config {
   my $config = shift;
   my $file = shift;
 
-  if (grep {$_ eq $file} @config_file_stack) {
-    die "Recursive inclusion of $file - parent(s): ", join ', ', @config_file_stack;
+  if (grep {$_ eq $file} @{ $config->{config_file_stack} }) {
+    die "Recursive inclusion of $file - parent(s): ", join ', ', @{ $config->{config_file_stack} };
   }
 
   open my $fh, '<', $file
     or warn "Can't open config file: $file: $!\n" and return;
 
-  push @config_file_stack, $file;
+  push @{ $config->{config_file_stack} }, $file;
 
   push @{ $config->{files} }, [$file, (stat($file))[9]];
 
@@ -479,7 +478,7 @@ sub _read_config {
       }
     }
   }
-  pop @config_file_stack;
+  pop @{ $config->{config_file_stack} };
   return 1;
 }
 
