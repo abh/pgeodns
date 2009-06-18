@@ -13,16 +13,29 @@ use Socket;
 
 my %opts = (verbose => 0);
 GetOptions (\%opts,
-	    'interface=s',
-	    'user=s',
-	    'verbose!',
-	   ) or die "invalid options";
+            'interface=s',
+            'user=s',
+            'verbose!',
+            'config=s',
+            'configtest!',
+            'development!',
+            'port=i',
+           ) or die "invalid options";
+
+
+my $config_file = $opts{config} || 'pgeodns.conf';
+my $port = $opts{port} || 53;
+
+exit !GeoDNS::load_config({},$config_file)
+  if $opts{configtest};
 
 die "--interface [ip|hostname] required\n" unless $opts{interface};
-die "--user [user|uid] required\n" unless $opts{user};
+die "--user [user|uid] required\n" if $> ==0 and !$opts{user};
 
-my $g = GeoDNS->new(interface => $opts{interface},
-                    debug     => 1,
+my $g = GeoDNS->new(interface   => $opts{interface},
+                    debug       => 1,
+                    config_file => $opts{config},
+                    development => ($opts{development} ? 1 : 0),
                    );
 
 my $localaddr = $opts{interface};
@@ -33,13 +46,13 @@ if ($localaddr =~ /[^\d\.]/) {
     $localaddr = $addr;
 }
 
-print "\nStarting GeoDNS $GeoDNS::VERSION/$GeoDNS::REVISION on $localaddr\n";
+printf "\nStarting GeoDNS %s\n", $g->version_full;
 
 my $ns = Net::DNS::Nameserver->new
   (
-   LocalPort    => 53,
+   LocalPort    => $port,
    LocalAddr    => $localaddr,
-   ReplyHandler => sub { 
+   ReplyHandler => sub {
        my @reply = $g->reply_handler(@_);
        #warn Data::Dumper->Dump([\@reply], [qw(reply)]);
        @reply
@@ -50,13 +63,13 @@ my $ns = Net::DNS::Nameserver->new
 # print error?
 die "couldn't create nameserver object\n" unless $ns;
 
-my $uid = $opts{user};
-$uid = getpwnam($uid) or die "could not lookup uid"
- if $uid =~ m/\D/;
+if (my $uid = $opts{user}) {
+    $uid = getpwnam($uid) or die "could not lookup uid"
+        if $uid =~ m/\D/;
+    setuid($uid) or die "could not setuid: $!";
+}
 
-setuid($uid) or die "could not setuid: $!";
-
-$g->load_config('pgeodns.conf');
+$g->load_config($config_file);
 
 if ($ns) {
   $ns->main_loop;
@@ -93,6 +106,10 @@ The interface to bind to.
 
 The username or uid to run as after binding to port 53.
 
+=item --config [config file]
+
+Base configuration file; defaults to ./pgeodns.conf
+
 =item --verbose
 
 Print even more status output.
@@ -104,7 +121,6 @@ Print even more status output.
 pgeodns.conf in the current directory.  Review it and the included
 samples in config/* until it gets documented. :-)
 
-    
 =head1 REFERENCES
 
 RFC2308  http://www.faqs.org/rfcs/rfc2308.html

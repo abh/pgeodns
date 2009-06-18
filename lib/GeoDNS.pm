@@ -1,24 +1,26 @@
 package GeoDNS;
 use strict;
 use warnings;
-use Net::DNS qw(0.60);
+use Net::DNS '0.64';
 use Countries qw(continent);
 use Geo::IP;
 use List::Util qw/max shuffle/;
 use Carp qw(cluck confess);
-use JSON qw();
+use JSON '2.12';
 use Data::Dumper;
 
-our $VERSION  = '1.10';
-our $REVISION = ('$Rev$' =~ m/(\d+)/x)[0];
-my $HeadURL = ('$HeadURL$'
-                 =~ m!(?:https?:/?)?(/[^/]+.*)(?:/lib.*)!x)[0];
+our $VERSION  = '1.32';
 
-# For the benefit of non-SVN checkouts
-$REVISION ||= '';
-$HeadURL  ||= '';
+my $git;
+
+if (-e ".git") {
+    $git = `git describe`;
+    chomp $git if $git;
+}
 
 my $gi = Geo::IP->new(GEOIP_STANDARD);
+
+my $json = JSON->new->relaxed(1);
 
 sub new {
   my $class = shift;
@@ -29,6 +31,11 @@ sub new {
   $args{stats}->{started} = time;
 
   return bless \%args, $class;
+}
+
+sub version_full {
+    my $self = shift;
+    return "$self->{interface}, v$VERSION" . ($git ? "/$git" : "");
 }
 
 sub config {
@@ -65,6 +72,12 @@ sub reply_handler {
   my $ttl = ($data_label->{ttl} || $config_base->{ttl});
 
   #warn Data::Dumper->Dump([\$data_label], [qw(data_label)]);
+  
+  if ($data_label->{alias}) {
+      $label = $data_label->{alias};
+      my $data_label = $data->{ $label } || {};
+      $ttl = ($data_label->{ttl} || $config_base->{ttl});
+  }
 
   # TODO: support the groups stuff for cnames
   if ($data_label->{cname}) {
@@ -75,7 +88,7 @@ sub reply_handler {
                                    cname => $data_label->{cname},
                                   );
       #warn Data::Dumper->Dump([\@ans], [qw(answer)]);
-      return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
+      return ('NOERROR', \@ans, \@auth, \@add, { aa => 1, opcode => '' });
   }
 
   # we don't need an authority section
@@ -99,7 +112,7 @@ sub reply_handler {
       push @ans, @{ ($self->_get_ns_records($config_base))[0] };
       push @add, @{ ($self->_get_ns_records($config_base))[1] };
     }
-    return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
+    return ('NOERROR', \@ans, \@auth, \@add, { aa => 1, opcode => '' });
   }
 
   if ($data->{$label}) {
@@ -155,17 +168,17 @@ sub reply_handler {
       }
     } 
 
-    @auth = ($self->_get_soa_record($config_base)) unless @ans;
+    @auth = (_get_soa_record($config_base)) unless @ans;
 
     # mark the answer as authoritive (by setting the 'aa' flag
-    return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
+    return ('NOERROR', \@ans, \@auth, \@add, { aa => 1, opcode => '' });
 
   }
   # TODO: these should be converted to A records during the configuration phase
   elsif ($config_base->{data}->{''}->{ns}->{$domain}) {
     push @ans, grep { $_->address eq $config_base->{data}->{''}->{ns}->{$domain} } @{ ($self->_get_ns_records($config_base))[1] };
     @add = grep { $_->address ne $config_base->{data}->{''}->{ns}->{$domain} } @add;
-    return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
+    return ('NOERROR', \@ans, \@auth, \@add, { aa => 1, opcode => '' });
   }
   elsif ($domain =~ m/^status\.\Q$base\E$/x) {
     my $uptime = (time - $stats->{started}) || 1;
@@ -173,21 +186,26 @@ sub reply_handler {
     my $status = sprintf '%s, upt: %i, q: %i, %.2f/qps',
       $self->{interface}, $uptime, $stats->{queries}, $stats->{queries}/$uptime;
     #  warn Data::Dumper->Dump([\$stats], [qw(stats)]);
-    push @ans, Net::DNS::RR->new("$domain. 1 IN TXT '$status'") if $query_type eq 'TXT' or $query_type eq 'ANY';
-    return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
+    push @ans, Net::DNS::RR->new("$domain. 1 $query_class TXT '$status'") if $query_type eq 'TXT' or $query_type eq 'ANY';
+    return ('NOERROR', \@ans, \@auth, \@add, { aa => 1, opcode => '' });
   }
   elsif ($domain =~ m/^version\.\Q$base\E$/x) {
-    my $version = "$self->{interface}, v$VERSION/$REVISION $HeadURL";
-    push @ans, Net::DNS::RR->new("$domain. 1 IN TXT '$version'") if $query_type eq 'TXT' or $query_type eq 'ANY';
-    return ('NOERROR', \@ans, \@auth, \@add, { aa => 1 });
+    my $version = $self->version_full;
+    push @ans, Net::DNS::RR->new("$domain. 1 $query_class TXT '$version'") if $query_type eq 'TXT' or $query_type eq 'ANY';
+    return ('NOERROR', \@ans, \@auth, \@add, { aa => 1, opcode => '' });
+  }
+  elsif ($self->{development} and $domain =~ m/^shutdown\./) {
+    warn "Got shutdown query; shutting down";
+    exit;
   }
   else {
-    @auth = $self->_get_soa_record($config_base);
-    return ('NXDOMAIN', [], \@auth, [], { aa => 1 });
+    @auth = _get_soa_record($config_base);
+    return ('NXDOMAIN', [], \@auth, [], { aa => 1, opcode => '' });
   }
 
 }
 
+my %ns_cache;
 
 sub _get_ns_records {
   my ($self, $config_base) = @_;
@@ -196,15 +214,15 @@ sub _get_ns_records {
   my $data = $config_base->{data}->{''};
 
   for my $ns (keys %{ $data->{ns} }) {
-    push @ans, Net::DNS::RR->new("$base 86400 IN NS $ns.");
-    push @add, Net::DNS::RR->new("$ns. 86400 IN A $data->{ns}->{$ns}")
+    push @ans, $ns_cache{"NS $ns"} ||= Net::DNS::RR->new("$base 86400 IN NS $ns");
+    push @add, $ns_cache{"A $ns"}  ||= Net::DNS::RR->new("$ns. 86400 IN A $data->{ns}->{$ns}")
       if $data->{ns}->{$ns};
   }
   return (\@ans, \@add);
 }
 
 sub _get_soa_record {
-  my ($self, $config_base) = @_;
+  my $config_base = shift;
   return Net::DNS::RR->new
     ("$config_base->{base}. 3600 IN SOA $config_base->{primary_ns};
       support.bitnames.com. $config_base->{serial} 5400 5400 2419200 $config_base->{ttl}");
@@ -249,7 +267,7 @@ sub pick_hosts {
       # find total weight;
       my $total = 0;
       my @servers = ();
-      for (sort { $a->[1] <=> $b->[1] } @{$group->{$qtype}}) {
+      for (sort { $b->[1] <=> $a->[1] } @{$group->{$qtype}}) {
           $total += $_->[1];
 	  # Normalization will do nothing if there is no colon 
 	  # in the host name
@@ -325,13 +343,38 @@ sub load_config {
   my $self     = shift;
   my $filename = shift or confess "load_config requires a filename";
 
+  my $config = eval { _load_config($filename) };
+  if (my $err = $@) {
+      warn "Configuration error: $err";
+      return 0;
+  }
+  $self->{config} = $config if $config;
+
+  return 1;
+}
+
+sub _load_config {
+  my $filename = shift;
+
   my $config = {};
   $config->{last_config_check} = time;
   $config->{files} = [];
+  $config->{config_file_stack} = [];
 
   _read_config( $config, $filename );
 
   delete $config->{base};
+  
+  $config->{bases}->{'pgeodns.'} = {
+                                 primary_ns => 'ns.pgeodns.',
+                                 serial     => 1,
+                                 ttl        => 1,
+                                 base       => 'pgeodns.',
+                                 data       => { '' => { ns => { 'ns.pgeodns.' => undef } },
+                                                 #'status'  => { txt => '__status__'  },
+                                                 #'version' => { txt => '__version__' },
+                                               },
+                                };
 
   # warn Data::Dumper->Dump([\$config], [qw(config)]);
 
@@ -362,36 +405,31 @@ sub load_config {
 
     warn "LEGACY DATA - NOT SUPPORTED - 'groups' configured for $base\n" if $config_base->{groups};
 
-    $config_base->{data}->{''}->{soa} = $self->_get_soa_record($config_base);
+    $config_base->{data}->{''}->{soa} = _get_soa_record($config_base);
 
     #warn Data::Dumper->Dump([\$config_base], [qw(config_base)]);
   }
 
-  
-  
-
   # use Data::Dumper;
   # warn Data::Dumper->Dump([\$config], [qw(config)]);
-
-  $self->{config} = $config;
-
-  return 1;
+    
+  return $config;
 }
 
-my @config_file_stack;
+  
 
 sub _read_config {
   my $config = shift;
   my $file = shift;
 
-  if (grep {$_ eq $file} @config_file_stack) {
-    die "Oops, recursive inclusion of $file - parent(s): ", join ', ', @config_file_stack;
+  if (grep {$_ eq $file} @{ $config->{config_file_stack} }) {
+    die "Recursive inclusion of $file - parent(s): ", join ', ', @{ $config->{config_file_stack} };
   }
 
   open my $fh, '<', $file
     or warn "Can't open config file: $file: $!\n" and return;
 
-  push @config_file_stack, $file;
+  push @{ $config->{config_file_stack} }, $file;
 
   push @{ $config->{files} }, [$file, (stat($file))[9]];
 
@@ -409,9 +447,9 @@ sub _read_config {
       if ($json_file) {
           open my $json_fh, '<', $json_file or warn "Could not open $json_file: $!\n" and next;
           push @{ $config->{files} }, [$json_file, (stat($json_file))[9]];
-          my $json = eval { local $/ = undef; <$json_fh> };
+          my $data = eval { local $/ = undef; <$json_fh> };
           close $json_fh;
-          $config->{bases}->{$base_name} = JSON::from_json($json);
+          $config->{bases}->{$base_name} = $json->decode($data);
       }
       $config->{bases}->{$base_name}->{base} = $base_name;
       next;
@@ -471,7 +509,7 @@ sub _read_config {
       }
     }
   }
-  pop @config_file_stack;
+  pop @{ $config->{config_file_stack} };
   return 1;
 }
 
@@ -567,10 +605,15 @@ Called automatically from the reply_handler.
 
 Given a domain name, returns the longest matching configured "base".
 
+=item version_full
+
+Returns a string with the interface, version number and git commit (if run from a
+git checkout).
+
 =back
 
 =head1 COPYRIGHT
 
-Copyright 2004-2007 Ask Bjoern Hansen and Develooper LLC.  This work
+Copyright 2001-2009 Ask Bjoern Hansen and Develooper LLC.  This work
 is distributed under the Apache License 2.0 (see the F<LICENSE> file
 for more details).

@@ -15,10 +15,10 @@ WriteMakefile
    #    },
    PREREQ_PM => 
    {
-    'Net::DNS'   => 0.61,
+    'Net::DNS'   => 0.64,
     'Geo::IP'    => 1.28,
     'List::Util' => 0,
-    'JSON' => 2.00,
+    'JSON' => 2.12,
    },
    MAN3PODS            => { }, # no need for docs on these
    dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },

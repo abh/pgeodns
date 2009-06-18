@@ -1,3 +1,33 @@
+1.32 - March 17, 2009
+
+   - Make re-loading the configuration after a config failure more robust
+   - Support for "alias" records (basically an internal CNAME)
+   - Remove newline from "git version" when running from a git clone
+
+1.31 - March 2, 2009
+
+   - Respond to status and version queries in CH class on "pgeodns" zone
+   - Only require --user option when started as root
+   - Add --port option
+
+1.30 - February 14, 2009
+
+   - Cache generated NS records
+   - Optimize pick_hosts to be slightly faster when hosts have different weights
+   - Work around bug printing warnings in Net::DNS 0.64 and 0.65
+   - Add --development switch with "shutdown query" to assist running Devel::NYTProf
+   - Update tests to work with Net::DNS 0.64+
+   - Require newer versions of Net::DNS and JSON modules
+   - Add --configtest option to test a configuration file (Robert Spier)
+
+1.20 - December 30, 2008
+
+   - If new configuration can't be loaded; keep the old one
+   - Allow 'relaxed' JSON in config files (trailing commas and comments)
+   - Add --config option to pgeodns.pl
+   - Updated to work with new JSON.pm (Steve Peters)
+   - Fix some excessive debug output and other small tweaks (Steve Peters)
+   - Move to git
 
 1.10 - October 4, 2007
 
