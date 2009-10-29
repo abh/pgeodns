@@ -39,6 +39,6 @@ t/recursive_include.conf
 t/recursive_include.t
 t/replies.conf
 t/replies_weight.t
-t/reply_01.t
+t/reply_a.t
 t/reply_cname.t
 t/version.t
