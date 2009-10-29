@@ -72,10 +72,10 @@ sub reply_handler {
   my $ttl = ($data_label->{ttl} || $config_base->{ttl});
 
   #warn Data::Dumper->Dump([\$data_label], [qw(data_label)]);
-  
-  if ($data_label->{alias}) {
+
+  if (defined $data_label->{alias}) {
       $label = $data_label->{alias};
-      my $data_label = $data->{ $label } || {};
+      $data_label = $data->{ $label } || {};
       $ttl = ($data_label->{ttl} || $config_base->{ttl});
   }
 
@@ -229,7 +229,7 @@ sub pick_groups {
   my @groups;
 
   for my $candidate (@candidates) {
-    my $group = join '.', grep { $_ } $qgroup,$candidate;
+    my $group = join '.', grep { defined $_ and $_ ne '' } $qgroup, $candidate;
     push @groups, $group if $config_base->{data}->{$group};
   }
 		     

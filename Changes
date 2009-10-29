@@ -1,3 +1,6 @@
+   - Make aliases to '0' work
+   - Various test improvements
+
 1.32 - March 17, 2009
 
    - Make re-loading the configuration after a config failure more robust
