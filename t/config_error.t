@@ -1,7 +1,7 @@
 use Test::More;
 use strict;
 
-eval { use Test::Warn };
+eval { require Test::Warn };
 plan skip_all => "Need Test::Warn" if $@;
 
 Test::Warn->import('warning_like');
