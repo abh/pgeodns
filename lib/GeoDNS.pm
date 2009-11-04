@@ -401,7 +401,7 @@ sub _read_config {
   }
 
   open my $fh, '<', $file
-    or warn "Can't open config file: $file: $!\n" and return;
+    or die "Can't open config file: $file: $!\n";
 
   push @{ $config->{config_file_stack} }, $file;
 

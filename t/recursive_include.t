@@ -1,10 +1,11 @@
 use Test::More;
 use strict;
 
-eval { require Test::Warn };
-plan skip_all => "Need Test::Warn" if $@;
-
-Test::Warn->import('warning_like');
+BEGIN {
+  eval { require Test::Warn };
+  plan skip_all => "Need Test::Warn" if $@;
+  Test::Warn->import('warning_like');
+}
 
 plan tests => 3;
 
