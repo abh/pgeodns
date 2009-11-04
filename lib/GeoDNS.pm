@@ -9,7 +9,7 @@ use Carp qw(cluck confess);
 use JSON '2.12';
 use Data::Dumper;
 
-our $VERSION  = '1.32';
+our $VERSION  = '1.33';
 
 my $git;
 
@@ -91,11 +91,9 @@ sub reply_handler {
       return ('NOERROR', \@ans, \@auth, \@add, { aa => 1, opcode => '' });
   }
 
-  # we don't need an authority section
-  # push @auth, @{ ($self->_get_ns_records($config_base))[0] };
-  
-  # TODO: figure out when this is necessary
-  push @add,  @{ ($self->_get_ns_records($config_base))[1] };
+  # Get glue records if we have some
+  # TODO: figure out when this is necessary - probably never(!)
+  push @add, @{ ($self->_get_ns_records($config_base))[1] };
 
   # TODO: this isn't quite right; the ANSWER section should only have a SOA record
   # when we really have one -- in other cases send back NOERROR, empty ANSWER and 
