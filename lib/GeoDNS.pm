@@ -241,7 +241,6 @@ sub pick_hosts {
   return unless $group and $group->{a};
 
   my @answer;
-  my $max = $config_base->{max_hosts} || 2;
 
   my $loop = 0;
 
@@ -263,7 +262,9 @@ sub pick_hosts {
 
   my @picked;
 
-  while ($total_weight and @answer < $max) {
+  my $max_hosts = $config_base->{max_hosts} || 2;
+
+  while ($total_weight and @answer < $max_hosts) {
     last if ++$loop > 10;  # bad configuration could make us loop ...
 
     my $n = int(rand( $total_weight ));
