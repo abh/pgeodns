@@ -418,7 +418,7 @@ sub _read_config {
       $base_name .= '.' unless $base_name =~ m/\.$/;
       $config->{base} = $base_name;
       if ($json_file) {
-          open my $json_fh, '<', $json_file or warn "Could not open $json_file: $!\n" and next;
+          open my $json_fh, '<', $json_file or die "Could not open $json_file: $!\n";
           push @{ $config->{files} }, [$json_file, (stat($json_file))[9]];
           my $data = eval { local $/ = undef; <$json_fh> };
           close $json_fh;

@@ -14,8 +14,8 @@ ok(my $g = GeoDNS->new, "new GeoDNS");
 
 warning_like { ok(!$g->load_config('t/json_config_missing.conf'),
                'loading missing file returns false' )
-               } qr/Can't open config file/,
-             'load_config warning when config is missing';
+               } qr/Could not open/,
+             'load_config warning when .json config is missing';
 
 ok($g->load_config('t/pick_groups.conf'), 'load good config');
 
