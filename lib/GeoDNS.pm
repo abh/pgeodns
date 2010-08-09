@@ -488,9 +488,23 @@ sub check_config {
   $first_file = $first_file && $first_file->[0];
   cluck 'No "first_file' unless $first_file;
   #return unless $first_file;
+
+  my $reload = 0;
+
   for my $file (@{$self->config->{files}}) {
-    do { $self->load_config($first_file); last }
-      if (stat($file->[0]))[9] != $file->[1]
+      if ((stat($file->[0]))[9] != $file->[1]) {
+          $reload = 1;
+          last;
+      }
+  }
+  if ($reload) {
+      eval {
+          $self->load_config($first_file);
+      };
+      if (my $err = $@) {
+          warn "Error re-loading configuration: $err\n";
+          return 0;
+      }
   }
   return 1;
 }
