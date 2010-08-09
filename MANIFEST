@@ -14,11 +14,13 @@ lib/GeoDNS.pm
 LICENSE
 Makefile.PL
 MANIFEST
+pgeodns
 pgeodns.conf
 pgeodns.pl
+README
 sync_config.sh
-t/countries.t
 t/config_error.t
+t/countries.t
 t/default_serial.t
 t/example.com.json
 t/find_base.conf
@@ -28,6 +30,7 @@ t/get_ns_records.t
 t/get_soa_record.t
 t/json_config.conf
 t/json_config.t
+t/json_config_missing.conf
 t/pick_groups.conf
 t/pick_groups.t
 t/pick_hosts.t
@@ -40,5 +43,7 @@ t/recursive_include.t
 t/replies.conf
 t/replies_weight.t
 t/reply_a.t
+t/reply_alias.t
 t/reply_cname.t
+t/reply_mx.t
 t/version.t

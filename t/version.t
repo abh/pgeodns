@@ -8,7 +8,7 @@ my $time = time;
 ok(my $g = GeoDNS->new, "new");
 ok($g->load_config('t/replies.conf'), "load_config");
 
-ok(my $g2 = GeoDNS->new(interface => '127.0.0.10'), "new");
+ok(my $g2 = GeoDNS->new(server_id => '127.0.0.10'), "new");
 ok($g2->load_config('t/replies.conf'), "load_config");
 
 like($g2->version_full, qr/^127.0.0.10, v1\.\d+/, 'full version method');

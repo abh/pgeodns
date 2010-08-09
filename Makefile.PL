@@ -9,7 +9,7 @@ WriteMakefile
    VERSION_FROM        => 'lib/GeoDNS.pm',
    ABSTRACT            => "Perl Geographic DNS Server",
    PL_FILES            => { },
-   EXE_FILES           => [ 'pgeodns.pl' ],
+   EXE_FILES           => [ 'pgeodns' ],
    #    PM => {
    #        'GeoDNS.pm' => '$(INST_LIBDIR)/App/HWD.pm',
    #    },
