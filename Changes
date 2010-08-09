@@ -1,4 +1,11 @@
 
+1.34 - August 8, 2010
+   - Support listening on multiple interfaces
+   - Better logging of errors reloading the configuration files
+   - Proper failure when .json file is missing
+   - Rename pgeodns.pl to pgeodns
+   - Use 'env perl' to run the perl binary
+
 1.33 - November 4, 2009
 
    - Add a README (!)
