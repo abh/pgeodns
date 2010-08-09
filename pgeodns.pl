@@ -13,7 +13,7 @@ use Socket;
 
 my %opts = (verbose => 0);
 GetOptions (\%opts,
-            'interface=s',
+            'interface=s@',
             'user=s',
             'verbose!',
             'config=s',
@@ -32,26 +32,31 @@ exit !GeoDNS::load_config({},$config_file)
 die "--interface [ip|hostname] required\n" unless $opts{interface};
 die "--user [user|uid] required\n" if $> ==0 and !$opts{user};
 
-my $g = GeoDNS->new(interface   => $opts{interface},
+$opts{interface} = [ $opts{interface} ] unless ref $opts{interface};
+$opts{interface} = [ map { split /\s*,\s*/ } @{$opts{interface}} ];
+
+for my $i ( 0 .. scalar @{$opts{interface}} - 1) {
+    my $localaddr = $opts{interface}->[$i];
+    if ($localaddr =~ /[^\d\.]/) {
+        my $addr = inet_ntoa((gethostbyname($localaddr))[4]);
+        die "could not lookup $localaddr\n" unless $addr;
+        $opts{interface}->[$i] = $addr;
+    }
+}
+
+my $g = GeoDNS->new(server_id   => $opts{interface}->[0],
                     debug       => 1,
                     config_file => $opts{config},
                     development => ($opts{development} ? 1 : 0),
                    );
 
-my $localaddr = $opts{interface};
-
-if ($localaddr =~ /[^\d\.]/) {
-    my $addr = inet_ntoa((gethostbyname($localaddr))[4]);
-    die "could not lookup $localaddr\n" unless $addr;
-    $localaddr = $addr;
-}
 
 printf "\nStarting GeoDNS %s\n", $g->version_full;
 
 my $ns = Net::DNS::Nameserver->new
   (
    LocalPort    => $port,
-   LocalAddr    => $localaddr,
+   LocalAddr    => $opts{interface},
    ReplyHandler => sub {
        my @reply = $g->reply_handler(@_);
        #warn Data::Dumper->Dump([\@reply], [qw(reply)]);
@@ -100,7 +105,12 @@ determination.
 
 =item --interface [ip]
 
-The interface to bind to.
+The interface to bind to.  Can be specified multiple times and contain
+comma separated IPs for specifying multiple interfaces.  The first
+interface will be used as the "server id" in diagnostic outputs.
+
+If a hostname is used instead of an IP, a DNS lookup will be done on
+startup to find the IP address.
 
 =item --user [user / uid]
 

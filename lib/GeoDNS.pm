@@ -26,7 +26,7 @@ sub new {
   my $class = shift;
   my %args  = @_;
 
-  $args{interface} ||= 'unknown_interface';
+  $args{server_id} ||= 'unknown_interface';
   $args{config} = {};
   $args{stats}->{started} = time;
 
@@ -35,7 +35,7 @@ sub new {
 
 sub version_full {
     my $self = shift;
-    return "$self->{interface}, v$VERSION" . ($git ? "/$git" : "");
+    return "$self->{server_id}, v$VERSION" . ($git ? "/$git" : "");
 }
 
 sub config {
@@ -166,7 +166,7 @@ sub reply_handler {
     my $uptime = (time - $stats->{started}) || 1;
     # TODO: convert to 2w3d6h format ...
     my $status = sprintf '%s, upt: %i, q: %i, %.2f/qps',
-      $self->{interface}, $uptime, $stats->{queries}, $stats->{queries}/$uptime;
+      $self->{server_id}, $uptime, $stats->{queries}, $stats->{queries}/$uptime;
     #  warn Data::Dumper->Dump([\$stats], [qw(stats)]);
     push @ans, Net::DNS::RR->new("$domain. 1 $query_class TXT '$status'") if $query_type eq 'TXT' or $query_type eq 'ANY';
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1, opcode => '' });
@@ -548,8 +548,8 @@ Given a domain name, returns the longest matching configured "base".
 
 =item version_full
 
-Returns a string with the interface, version number and git commit (if run from a
-git checkout).
+Returns a string with the server id (interface), version number and
+git commit (if run from a git checkout).
 
 =back
 
