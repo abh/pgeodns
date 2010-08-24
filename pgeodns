@@ -11,66 +11,67 @@ use POSIX qw(setuid);
 use Getopt::Long;
 use Socket;
 
-my %opts = (verbose => 0);
-GetOptions(\%opts, 'interface=s@', 'user=s', 'verbose!', 'config=s', 'configtest!', 'development!',
-    'port=i',)
+GetOptions('interface=s@' => \(my $opt_interface),
+           'user=s'       => \(my $opt_user),
+           'verbose!'     => \(my $opt_verbose = 0),
+           'config=s'     => \(my $opt_config = 'pgeodns.conf'),
+           'configtest!'  => \(my $opt_configtest = 0),
+           'development!' => \(my $opt_development = 0),
+           'port=i'       => \(my $opt_port = 53)
+          )
   or die "invalid options";
 
+exit !GeoDNS::load_config({}, $opt_config)
+  if $opt_configtest;
 
-my $config_file = $opts{config} || 'pgeodns.conf';
-my $port        = $opts{port}   || 53;
+die "--interface [ip|hostname] required\n" unless $opt_interface;
+die "--user [user|uid] required\n" if $> == 0 and !$opt_user;
 
-exit !GeoDNS::load_config({}, $config_file)
-  if $opts{configtest};
+$opt_interface = [$opt_interface] unless ref $opt_interface;
+$opt_interface = [map { split /\s*,\s*/ } @{$opt_interface}];
 
-die "--interface [ip|hostname] required\n" unless $opts{interface};
-die "--user [user|uid] required\n" if $> == 0 and !$opts{user};
-
-$opts{interface} = [$opts{interface}] unless ref $opts{interface};
-$opts{interface} = [map { split /\s*,\s*/ } @{$opts{interface}}];
-
-for my $i (0 .. scalar @{$opts{interface}} - 1) {
-    my $localaddr = $opts{interface}->[$i];
+for my $i (0 .. scalar @{$opt_interface} - 1) {
+    my $localaddr = $opt_interface->[$i];
     # TODO: Do a proper IP address check
     if ($localaddr =~ /[^\d\.:a-f]/) {
         my $addr = inet_ntoa((gethostbyname($localaddr))[4]);
         die "could not lookup $localaddr\n" unless $addr;
-        $opts{interface}->[$i] = $addr;
+        $opt_interface->[$i] = $addr;
     }
 }
 
 my $g = GeoDNS->new(
-    server_id   => $opts{interface}->[0],
+    server_id   => $opt_interface->[0],
     debug       => 1,
-    config_file => $opts{config},
-    development => ($opts{development} ? 1 : 0),
+    config_file => $opt_config,
+    development => ($opt_development ? 1 : 0),
 );
 
 
 printf "\nStarting GeoDNS %s\n", $g->version_full;
 
 my $ns = Net::DNS::Nameserver->new(
-    LocalPort    => $port,
-    LocalAddr    => $opts{interface},
+    LocalPort    => $opt_port,
+    LocalAddr    => $opt_interface,
     ReplyHandler => sub {
         my @reply = $g->reply_handler(@_);
 
         #warn Data::Dumper->Dump([\@reply], [qw(reply)]);
         @reply;
     },
-    Verbose => $opts{verbose},
+    Verbose => $opt_verbose,
 );
 
 # print error?
 die "couldn't create nameserver object\n" unless $ns;
 
-if (my $uid = $opts{user}) {
+if (my $uid = $opt_user) {
     $uid = getpwnam($uid) or die "could not lookup uid"
       if $uid =~ m/\D/;
     setuid($uid) or die "could not setuid: $!";
 }
 
-$g->load_config($config_file);
+$g->load_config($opt_config);
 
 if ($ns) {
     $ns->main_loop;
