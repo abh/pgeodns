@@ -1,4 +1,8 @@
 
+   - IPv6 (AAAA record) support (Martin von Löwis)
+   - Allow listening on IPv6 IPs
+   - Various code cleanups
+
 1.34 - August 8, 2010
    - Support listening on multiple interfaces
    - Better logging of errors reloading the configuration files
