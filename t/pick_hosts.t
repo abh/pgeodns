@@ -7,7 +7,7 @@ ok($g->load_config('t/pick_groups.conf'), "load_config");
 
 my $config_base = $g->config('example.com.');
 
-is(my @ans = $g->pick_hosts($config_base, "ftp.cpan"), 2, "two answers returned (out of 3)");
+is(my @ans = $g->pick_hosts($config_base, "ftp.cpan", 'a'), 2, "two answers returned (out of 3)");
 
 #use Data::Dumper;
 #my $x = $config_base->{groups}->{"ftp.cpan"}->{servers};
@@ -15,7 +15,7 @@ is(my @ans = $g->pick_hosts($config_base, "ftp.cpan"), 2, "two answers returned 
 
 my $first;
 foreach my $res (@ans) {
-  ok(grep(/^$res->{name}/, map { $_->[1]->[0] } @{$config_base->{data}->{"ftp.cpan"}->{servers}}), "host belongs to the group");
+  ok(grep(/^$res->{name}/, map { $_->[1]->[0] } @{$config_base->{data}->{"ftp.cpan"}->{serversa}}), "host belongs to the group");
   is($res->{ip}, $config_base->{hosts}->{$res->{name}}->{ip}, "correct IP returned for host");
 
   if ($first) {
