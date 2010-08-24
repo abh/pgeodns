@@ -31,7 +31,8 @@ $opts{interface} = [map { split /\s*,\s*/ } @{$opts{interface}}];
 
 for my $i (0 .. scalar @{$opts{interface}} - 1) {
     my $localaddr = $opts{interface}->[$i];
-    if ($localaddr =~ /[^\d\.]/) {
+    # TODO: Do a proper IP address check
+    if ($localaddr =~ /[^\d\.:a-f]/) {
         my $addr = inet_ntoa((gethostbyname($localaddr))[4]);
         die "could not lookup $localaddr\n" unless $addr;
         $opts{interface}->[$i] = $addr;
