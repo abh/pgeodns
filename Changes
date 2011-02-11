@@ -1,4 +1,5 @@
 
+1.40 - February 11, 2011
    - IPv6 (AAAA record) support (Martin von Löwis)
    - Allow listening on IPv6 IPs
    - Various code cleanups

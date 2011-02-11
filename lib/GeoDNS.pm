@@ -9,7 +9,7 @@ use Carp qw(cluck confess);
 use JSON '2.12';
 use Data::Dumper;
 
-our $VERSION  = '1.34';
+our $VERSION  = '1.40';
 
 my $git;
 
