@@ -19,6 +19,7 @@ WriteMakefile
     'Geo::IP'    => 1.28,
     'List::Util' => 0,
     'JSON' => 2.12,
+    'IO::Socket::INET6' => '2.01',  # ipv6 support for Net::DNS
    },
    MAN3PODS            => { }, # no need for docs on these
    dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
