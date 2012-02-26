@@ -13,8 +13,12 @@ WriteMakefile
    #    PM => {
    #        'GeoDNS.pm' => '$(INST_LIBDIR)/App/HWD.pm',
    #    },
-   PREREQ_PM => 
-   {
+   MIN_PERL_VERSION => '5.008',
+   BUILD_REQUIRES => {
+     'ExtUtils::MakeMaker' => '6.48',
+     'Test::Simple' => '0.90',
+   },
+   PREREQ_PM => {
     'Net::DNS'   => 0.67,
     'Geo::IP'    => 1.28,
     'List::Util' => 0,

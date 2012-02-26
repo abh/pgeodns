@@ -1,5 +1,6 @@
-use Test::More qw(no_plan);
+use Test::More;
 use strict;
+use JSON qw(decode_json);
 
 my @ans;
 
@@ -32,3 +33,11 @@ like($ans[1]->[0]->rdatastr, qr!q: 5,!, 'five queries now');
 
 ok(@ans = $g2->reply_handler("status.example.com", "IN", "ANY", "192.168.0.10"), "status request, any");
 like($ans[1]->[0]->rdatastr, qr!q: 1,!, 'g2 has only done one query now');
+
+ok(@ans = $g->reply_handler("_status.pgeodns", "IN", "TXT", "192.168.0.10"), "_status request (json), txt");
+my $x = join "\n", $ans[1]->[0]->char_str_list;
+#warn "[", ref $x, "] $x";
+ok(my $data = decode_json($x), "decode json");
+like($data->{v}, qr!v$GeoDNS::VERSION/!, 'got the version back');
+
+done_testing();
