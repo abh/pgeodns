@@ -1,5 +1,6 @@
 1.41 - February 12, 2012
    - Add _status.pgeodns query returning JSON status
+   - Require Net::DNS 0.67 to avoid crashing bug in earlier versions
    - Minor tweaks, more documentation
 
 1.40 - February 11, 2011
