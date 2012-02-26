@@ -1,5 +1,4 @@
-pgeodns - geo-aware authoriative domain nameserver
---------------------------------------------------
+# pgeodns - geo-aware authoriative domain nameserver
 
 pgeodns is an authoritative DNS server that can give different replies
 to each client, taking into account the country of origin of the
@@ -17,8 +16,7 @@ server. They are providing their configuration as a minimal example:
 https://svn.apache.org/repos/infra/infrastructure/trunk/dns/zones/pgeodns.conf
 https://svn.apache.org/repos/infra/infrastructure/trunk/dns/zones/geo.apache.org.json
 
-Installation
-------------
+## Installation
 
    perl Makefile.PL  # will warn if any dependencies are missing
    make 
@@ -30,8 +28,7 @@ Net::DNS, Geo::IP, List::Util, JSON.  It's optional, but if you
 install JSON::XS loading large zone data files will be ever so
 slightly faster.
 
-Configuration
--------------
+## Configuration
 
 pgeodns needs two configuration files; one simple text file to define
 the zones served and some options, and then for each zone a JSON
@@ -43,24 +40,20 @@ easy for computers to use, practically in any language: http://json.org/
 The pgeodns.conf file should look like the following.  Only one or
 more "base" lines are required.
 
-<snip>
-  # global options
+    # global options
 
-  base some.zone.example.com data/some.file.json
-  # options for this zone
+    base some.zone.example.com data/some.file.json
+    # options for this zone
 
-  # base another.example.com data/some.file.json
-  # options for this zone
-</snip>
+    # base another.example.com data/some.file.json
+    # options for this zone
 
-Data file format
-----------------
+## Data file format
 
 See t/example.com.json for a small example for now.
 
 
-Command line options
---------------------
+## Command line options
 
 * --config=[ configuration file ]
 
@@ -97,9 +90,7 @@ exit. Obviously not a good idea in production, but can be handy in a
 development/testing environment.
 
 
-
-Configuration Options
----------------------
+## Configuration Options
 
 The options allowed in the 'base' configuration file are
 
@@ -123,6 +114,5 @@ Set the default time-to-live for the zone in seconds.
 * include filename
 
 Include another filename.
-
 
 
