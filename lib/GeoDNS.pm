@@ -21,6 +21,7 @@ if (-e ".git") {
 my $gi = Geo::IP->new(GEOIP_STANDARD);
 
 my $json = JSON->new->relaxed(1);
+my $json_dns = JSON->new->ascii(1);
 
 sub new {
   my $class = shift;
@@ -176,6 +177,17 @@ sub reply_handler {
   elsif ($config_base->{data}->{''}->{ns}->{$domain}) {
     push @ans, grep { $_->address eq $config_base->{data}->{''}->{ns}->{$domain} } @{ ($self->_get_ns_records($config_base))[1] };
     @add = grep { $_->address ne $config_base->{data}->{''}->{ns}->{$domain} } @add;
+    return ('NOERROR', \@ans, \@auth, \@add, { aa => 1, opcode => '' });
+  }
+  elsif ($domain =~ m/^_status\.\Q$base\E$/x) {
+    my $data = {
+        up => ((time - $stats->{started}) || 1),
+        id => $self->{server_id},
+        qs => $stats->{queries},
+        v  => $self->version_full,
+    };
+    my $status = $json_dns->encode($data);
+    push @ans, Net::DNS::RR->new("$domain. 1 $query_class TXT '$status'") if $query_type eq 'TXT' or $query_type eq 'ANY';
     return ('NOERROR', \@ans, \@auth, \@add, { aa => 1, opcode => '' });
   }
   elsif ($domain =~ m/^status\.\Q$base\E$/x) {

@@ -1,3 +1,6 @@
+1.41 - February 12, 2012
+   - Add _status.pgeodns query returning JSON status
+   - Minor tweaks, more documentation
 
 1.40 - February 11, 2011
    - IPv6 (AAAA record) support (Martin von Löwis)
