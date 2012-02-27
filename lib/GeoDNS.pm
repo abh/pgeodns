@@ -34,9 +34,14 @@ sub new {
   return bless \%args, $class;
 }
 
+sub version {
+    my $self = shift;
+    return "v$VERSION" . ($git ? "/$git" : "");
+}
+
 sub version_full {
     my $self = shift;
-    return "$self->{server_id}, v$VERSION" . ($git ? "/$git" : "");
+    return "$self->{server_id}, ". $self->version;
 }
 
 sub config {
@@ -184,7 +189,7 @@ sub reply_handler {
         up => ((time - $stats->{started}) || 1),
         id => $self->{server_id},
         qs => $stats->{queries},
-        v  => $self->version_full,
+        v  => $self->version,
     };
     my $status = $json_dns->encode($data);
     push @ans, Net::DNS::RR->new("$domain. 1 $query_class TXT '$status'") if $query_type eq 'TXT' or $query_type eq 'ANY';
@@ -630,10 +635,15 @@ Called automatically from the reply_handler.
 
 Given a domain name, returns the longest matching configured "base".
 
+=item version
+
+Returns a string with the current version number and git commit (if
+run from a git checkout).
+
 =item version_full
 
-Returns a string with the server id (interface), version number and
-git commit (if run from a git checkout).
+Returns a string with the version (see above) prepended with the
+server id (interface)
 
 =back
 
