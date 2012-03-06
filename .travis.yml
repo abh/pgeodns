@@ -1,4 +1,7 @@
 language: perl
+before_install:
+  - sudo apt-get install libgeoip-dev libgeo-ip-perl
+  - sudo ln -s /usr/share/GeoIP /usr/local/share/GeoIP
 perl:
   - "5.14"
   - "5.12"
