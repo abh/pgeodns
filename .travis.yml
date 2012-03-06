@@ -2,6 +2,9 @@ language: perl
 before_install:
   - sudo apt-get install libgeoip-dev libgeo-ip-perl
   - sudo ln -s /usr/share/GeoIP /usr/local/share/GeoIP
+# IO::Socket::INET6 wants Module::Build installed, but that
+# doesn't play nice on 5.8
+  - sudo cpanm -n -f Module::Build
 before_script:
   - sudo cpanm -n Test::Pod Test::Pod::Coverage Test::Warn
 perl:
