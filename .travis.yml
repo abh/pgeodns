@@ -2,6 +2,8 @@ language: perl
 before_install:
   - sudo apt-get install libgeoip-dev libgeo-ip-perl
   - sudo ln -s /usr/share/GeoIP /usr/local/share/GeoIP
+before_script:
+  - sudo cpanm -n Test::Pod Test::Pod::Coverage Test::Warn
 perl:
   - "5.14"
   - "5.12"
