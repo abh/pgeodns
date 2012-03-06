@@ -64,6 +64,11 @@ the current directory.
 
 IP or hostname to listen on (for example 192.168.10.10)
 
+You can specify a comma separated list of IPs. The first IP will be used as the
+"server id" when returning status information (see "Special Queries" below), so
+if using anycast be sure to put the local/internal IP first or you won't be able
+to tell the nodes apart.
+
 * --user=[ username | userid ]
 
 Username or ID to change to after binding to the port.
