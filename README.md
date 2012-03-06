@@ -120,4 +120,32 @@ Set the default time-to-live for the zone in seconds.
 
 Include another filename.
 
+## Special queries
 
+To ease monitoring pgeodns supports some special queries, all `txt` type.
+
+They work with both 'IN' (internet) and 'CH' (chaos) class queries; in the 
+future we might only support CH.
+
+* status.pgeodns
+
+Returns a text status with the "id"
+
+* version.pgeodns
+
+For example:
+
+```sh
+dig +short -t txt version.pgeodns @a.ntpns.org
+"199.15.176.153, v1.41"
+```
+
+For historical reasons the special queries work on both the 'pgeodns' top level 
+domain and on any other configured base domain; combined with working with the
+internet class this has the side effect of making it easy to see which server
+is responding to your queries:
+
+```sh
+$ dig +short -t txt -c in status.pool.ntp.org 
+"199.15.176.153, upt: 8901928, q: 993862438, 111.65/qps"
+```
