@@ -449,6 +449,8 @@ sub _read_config {
 
   push @{ $config->{files} }, [$file, (stat($file))[9]];
 
+  my $base_ns = 0;
+
   while (<$fh>) {
     chomp;
     s/^\s+//;
@@ -457,6 +459,7 @@ sub _read_config {
     last if /^__END__$/;
 
     if (s/^base\s+//) {
+      $base_ns = 0;
       my ($base_name, $json_file) = split /\s+/, $_;
       $base_name .= '.' unless $base_name =~ m/\.$/;
       $config->{base} = $base_name;
@@ -476,6 +479,7 @@ sub _read_config {
     }
 
     unless ($config->{base}) {
+      # read default configurations
       if (s/^ns\s+//) {
 	my ($name, $ip) = split /\s+/, $_;
         $name .= '.' unless $name =~ m/\.$/;
@@ -497,6 +501,11 @@ sub _read_config {
     my $config_base = $config->{bases}->{$base};
 
     if (s/^ns\s+//) {
+      if (!$base_ns) {
+        # clear NS records from json config if there are overrides
+        $base_ns = 1;
+        $config_base->{data}->{''}->{ns} = {};
+      }
       my ($name, $ip) = split /\s+/, $_;
       $name .= '.' unless $name =~ m/\.$/;  # TODO: refactor this so these lines aren't duplicated
                                             # with the ones above
