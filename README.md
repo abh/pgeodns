@@ -124,6 +124,9 @@ Include another filename.
 
 To ease monitoring pgeodns supports some special queries, all `txt` type.
 
+If your application is sensitive to revealing this sort of information you
+will need to disable this in the code.
+
 They work with both 'IN' (internet) and 'CH' (chaos) class queries; in the 
 future we might only support CH.
 
@@ -133,12 +136,20 @@ Returns a text status with the "id"
 
 * version.pgeodns
 
+Returns a text status with the "version".
+
 For example:
 
 ```sh
 dig +short -t txt version.pgeodns @a.ntpns.org
 "199.15.176.153, v1.41"
 ```
+
+* _status.pgeodns
+
+Returns a JSON formatted data structure with query count, uptime etc.
+
+### Special query domains
 
 For historical reasons the special queries work on both the 'pgeodns' top level 
 domain and on any other configured base domain; combined with working with the
