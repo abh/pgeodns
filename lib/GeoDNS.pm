@@ -56,9 +56,10 @@ sub reply_handler {
   $self->check_config();
 
   my ($domain, $query_class, $query_type, $peer_host) = @_;
+
   $domain = lc $domain . '.';
 
-  warn "$peer_host | $domain | $query_type $query_class\n" if $self->{debug};
+  warn "$peer_host | $domain | $query_type $query_class\n" if $self->{log};
 
   my $stats = $self->{stats};
 

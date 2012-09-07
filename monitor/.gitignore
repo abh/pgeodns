@@ -1,3 +1,2 @@
-measurements.db
-rrd
-graphs
+db
+node_modules

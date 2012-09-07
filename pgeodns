@@ -42,9 +42,8 @@ for my $i (0 .. scalar @{$opt_interface} - 1) {
 
 my $g = GeoDNS->new(
     server_id   => $opt_interface->[0],
-    debug       => 1,
-    config_file => $opt_config,
     development => ($opt_development ? 1 : 0),
+    log         => 1,
 );
 
 
