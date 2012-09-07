@@ -1,3 +1,9 @@
+   - Don't include the server_id in the json version data
+   - Fix version tests (Steve Wills)
+   - Enable travis-ci testing
+   - Document the 'special queries'
+   - Make 'ns' config override instead of adding to ns records from JSON
+
 1.41 - February 12, 2012
    - Add _status.pgeodns query returning JSON status
    - Require Net::DNS 0.67 to avoid crashing bug in earlier versions
