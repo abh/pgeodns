@@ -415,11 +415,12 @@ sub _load_config {
         ($config_base->{primary_ns}) = sort keys %{$config_base->{data}->{""}->{ns}} if $config_base->{data}->{""}->{ns};
     }
 
+    $config_base->{mtime} = max map { $config->{files}->{$_} } @{$config_base->{files}};
     unless ($config_base->{serial}) {
-        $config_base->{serial} = max map { $config->{files}->{$_} } @{$config_base->{files}};
+        $config_base->{serial} = $config_base->{mtime} || $config->{serial};
     }
 
-    for my $f (qw(primary_ns ttl serial)) {
+    for my $f (qw(primary_ns ttl)) {
       $config_base->{$f} = $config->{$f} or die "default $f needed but not set"
 	unless $config_base->{$f};
     }
@@ -471,13 +472,17 @@ sub _read_config {
       my ($base_name, $json_file) = split /\s+/, $_;
       $base_name .= '.' unless $base_name =~ m/\.$/;
       $config->{base} = $base_name;
+      my @files = @{ $config->{config_file_stack} };
       if ($json_file) {
           open my $json_fh, '<', $json_file or die "Could not open $json_file: $!\n";
           $config->{files}->{$json_file} = (stat($json_file))[9];
+          push @files, $json_file;
           my $data = eval { local $/ = undef; <$json_fh> };
           close $json_fh;
           $config->{bases}->{$base_name} = $json->decode($data);
+          $config->{bases}->{$base_name}->{json_config} = 1;
       }
+      $config->{bases}->{$base_name}->{files} = \@files;
       $config->{bases}->{$base_name}->{base} = $base_name;
       next;
     }
@@ -507,7 +512,6 @@ sub _read_config {
 
     my $base = $config->{base};
     my $config_base = $config->{bases}->{$base};
-    $config_base->{files} = [ @{ $config->{config_file_stack} } ];
 
     if (s/^ns\s+//) {
       if (!$base_ns) {
