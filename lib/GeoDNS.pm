@@ -386,6 +386,7 @@ sub _load_config {
 
   for my $tld (qw(bind pgeodns)) {
       $config->{bases}->{"$tld."} = {
+                                 internal   => 1,    
                                  primary_ns => 'ns.pgeodns.',
                                  serial     => 1,
                                  ttl        => 1,

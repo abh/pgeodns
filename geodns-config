@@ -1,0 +1,56 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+use lib 'lib';
+use v5.10.0;
+use GeoDNS;
+use JSON qw(encode_json);
+use Getopt::Long qw(GetOptions);
+
+GetOptions(
+    'verbose!' => \(my $opt_verbose = 0),
+    'config=s' => \(my $opt_config  = 'pgeodns.conf'),
+    'out=s'    => \(my $opt_out),
+) or die "invalid options";
+
+my $g = GeoDNS->new(server_id => 'config',);
+
+$g->load_config($opt_config);
+my $c = $g->{config};
+
+while (my ($domain, $config) = each %{$g->{config}->{bases}}) {
+    next if $config->{internal};
+    delete $config->{base};
+    delete $config->{data}->{""}->{soa};
+    for my $zone (keys %{$config->{data}}) {
+        my $data = $config->{data}->{$zone};
+        for my $t (qw(a aaaa)) {
+            next unless $data->{$t};
+            for my $r (@{$data->{$t}}) {
+                my $ip;
+                my $hostname = $r->[0];
+                if ($hostname =~ m/^\d{1,3}(.\d{1,3}){3}$/x) {
+                    $ip = $hostname;
+                } elsif ($hostname =~ m/:/x) {
+                    $ip = $hostname;
+                } else {
+                    $ip = $config->{hosts}->{$hostname}->{ip};
+                }
+                $r->[0] = $ip;
+            }
+        }
+    }
+
+    delete @{$config}{qw(hosts json_config primary_ns files)};
+
+    $domain =~ s/\.$//;
+    my $file = $opt_out . "/$domain.json";
+
+    next unless $config->{mtime} > ((stat($file))[9] || 0);
+
+    my $file_tmp = $file . ".$$.tmp";
+    open my $fh, ">", $file_tmp or die "Could not open $file_tmp: $!";
+    print $fh encode_json($config) or die "Could not print to $file_tmp: $!";
+    close $fh or die "Could not close $file_tmp: $!";
+    rename $file_tmp, $file or die "Could not rename $file_tmp: $!"; 
+}
