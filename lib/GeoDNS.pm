@@ -375,7 +375,8 @@ sub _load_config {
 
   my $config = {};
   $config->{last_config_check} = time;
-  $config->{files} = [];
+  $config->{files} = {};
+  $config->{first_config_file} = $filename;
   $config->{config_file_stack} = [];
 
   _read_config( $config, $filename );
@@ -396,7 +397,7 @@ sub _load_config {
   # warn Data::Dumper->Dump([\$config], [qw(config)]);
 
   # the default serial is timestamp of the newest config file. 
-  $config->{serial} = max map {$_->[1]} @{ $config->{files} }
+  $config->{serial} = max values %{ $config->{files} }
     unless $config->{serial} and $config->{serial} =~ m/^\d+$/;
   $config->{ttl}    = 180 unless $config->{ttl} and $config->{ttl} !~ m/\D/;
 
@@ -410,6 +411,10 @@ sub _load_config {
     # but we don't have that cleanup for "pure" json configs
     unless ($config_base->{primary_ns}) {
         ($config_base->{primary_ns}) = sort keys %{$config_base->{data}->{""}->{ns}} if $config_base->{data}->{""}->{ns};
+    }
+
+    unless ($config_base->{serial}) {
+        $config_base->{serial} = max map { $config->{files}->{$_} } @{$config_base->{files}};
     }
 
     for my $f (qw(primary_ns ttl serial)) {
@@ -448,7 +453,7 @@ sub _read_config {
 
   push @{ $config->{config_file_stack} }, $file;
 
-  push @{ $config->{files} }, [$file, (stat($file))[9]];
+  $config->{files}->{$file} = (stat($file))[9];
 
   my $base_ns = 0;
 
@@ -466,7 +471,7 @@ sub _read_config {
       $config->{base} = $base_name;
       if ($json_file) {
           open my $json_fh, '<', $json_file or die "Could not open $json_file: $!\n";
-          push @{ $config->{files} }, [$json_file, (stat($json_file))[9]];
+          $config->{files}->{$json_file} = (stat($json_file))[9];
           my $data = eval { local $/ = undef; <$json_fh> };
           close $json_fh;
           $config->{bases}->{$base_name} = $json->decode($data);
@@ -500,6 +505,7 @@ sub _read_config {
 
     my $base = $config->{base};
     my $config_base = $config->{bases}->{$base};
+    $config_base->{files} = [ @{ $config->{config_file_stack} } ];
 
     if (s/^ns\s+//) {
       if (!$base_ns) {
@@ -542,15 +548,15 @@ sub _read_config {
 sub check_config {
   my $self = shift;
   return unless time >= ($self->config->{last_config_check} + 30);
-  my ($first_file) = (@{$self->config->{files}})[0];
-  $first_file = $first_file && $first_file->[0];
+  my $first_file = $self->config->{first_config_file};
   cluck 'No "first_file' unless $first_file;
   #return unless $first_file;
 
   my $reload = 0;
 
-  for my $file (@{$self->config->{files}}) {
-      if ((stat($file->[0]))[9] != $file->[1]) {
+  for my $file (keys %{$self->config->{files}}) {
+      my $mtime = $self->config->{files}->{$file};
+      if ((stat($file))[9] != $mtime) {
           $reload = 1;
           last;
       }
