@@ -382,8 +382,9 @@ sub _load_config {
   _read_config( $config, $filename );
 
   delete $config->{base};
-  
-  $config->{bases}->{'pgeodns.'} = {
+
+  for my $tld (qw(bind pgeodns)) {
+      $config->{bases}->{"$tld."} = {
                                  primary_ns => 'ns.pgeodns.',
                                  serial     => 1,
                                  ttl        => 1,
@@ -393,6 +394,7 @@ sub _load_config {
                                                  #'version' => { txt => '__version__' },
                                                },
                                 };
+  }
 
   # warn Data::Dumper->Dump([\$config], [qw(config)]);
 

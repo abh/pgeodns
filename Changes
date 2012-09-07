@@ -1,3 +1,4 @@
+   - Support bind as a special zone in addition to pgeodns
    - Be more accurate about generating serial numbers from timestamps
    - Don't include the server_id in the json version data
    - Fix version tests (Steve Wills)
