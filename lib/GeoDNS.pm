@@ -239,9 +239,10 @@ sub _get_ns_records {
 
 sub _get_soa_record {
   my $config_base = shift;
+  my ($ttl, $serial) = @{$config_base}{qw(ttl serial)};
   return Net::DNS::RR->new
     ("$config_base->{base}. 3600 IN SOA $config_base->{primary_ns};
-      support.bitnames.com. $config_base->{serial} 5400 5400 2419200 $config_base->{ttl}");
+      support.bitnames.com. $serial 5400 5400 2419200 $ttl");
 }
 
 sub pick_groups {
@@ -423,6 +424,11 @@ sub _load_config {
     for my $f (qw(primary_ns ttl)) {
       $config_base->{$f} = $config->{$f} or die "default $f needed but not set"
 	unless $config_base->{$f};
+    }
+
+    # make sure it's numeric if exported to JSON
+    for my $f (qw(serial ttl)) {
+        $config_base->{$f} += 0;
     }
 
     die "no ns configured in the config file for base $base"
