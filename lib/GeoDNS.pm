@@ -462,6 +462,9 @@ sub _read_config {
     or die "Can't open config file: $file: $!\n";
 
   push @{ $config->{config_file_stack} }, $file;
+  if (my $base = $config->{base}) {
+      push @{$config->{bases}->{$base}->{files}}, $file;
+  }
 
   $config->{files}->{$file} = (stat($file))[9];
 
