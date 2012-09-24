@@ -18,9 +18,9 @@ https://svn.apache.org/repos/infra/infrastructure/trunk/dns/zones/geo.apache.org
 
 ## Golang based version
 
-For performance sensitive applications there's a "port" of this
-application written in [Go](http://golang.org) that can do many more
-queries per second.
+For performance sensitive applications [there's a
+"port"](https://github.com/abh/geodns) of this application written in
+[Go](http://golang.org) that can do many more queries per second.
 
 
 ## Installation
