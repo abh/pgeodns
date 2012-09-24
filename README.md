@@ -16,6 +16,13 @@ server. They are providing their configuration as a minimal example:
 https://svn.apache.org/repos/infra/infrastructure/trunk/dns/zones/pgeodns.conf
 https://svn.apache.org/repos/infra/infrastructure/trunk/dns/zones/geo.apache.org.json
 
+## Golang based version
+
+For performance sensitive applications there's a "port" of this
+application written in [Go](http://golang.org) that can do many more
+queries per second.
+
+
 ## Installation
 
    perl Makefile.PL  # will warn if any dependencies are missing
@@ -34,8 +41,8 @@ pgeodns needs two configuration files; one simple text file to define
 the zones served and some options, and then for each zone a JSON
 formatted data file with the zone data.
 
-JSON is relatively easy to read and write for humans, and extremely
-easy for computers to use, practically in any language: http://json.org/
+[JSON](http://json.org) is relatively easy to read and write for humans, and extremely
+easy for computers to use, practically in any language.
 
 The pgeodns.conf file should look like the following.  Only one or
 more "base" lines are required.
