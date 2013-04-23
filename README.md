@@ -1,5 +1,13 @@
 # pgeodns - geo-aware authoriative domain nameserver
 
+## Golang based version
+
+This program was [ported to Go](https://github.com/abh/geodns). That
+version is faster, now has more features and has (also) endured
+billions and billions of production requests.
+
+## Pgeodns
+
 pgeodns is an authoritative DNS server that can give different replies
 to each client, taking into account the country of origin of the
 client and do weighted responses so some records are returned more
@@ -15,13 +23,6 @@ to their European SVN mirror and North American ones to the US based
 server. They are providing their configuration as a minimal example:
 https://svn.apache.org/repos/infra/infrastructure/trunk/dns/zones/pgeodns.conf
 https://svn.apache.org/repos/infra/infrastructure/trunk/dns/zones/geo.apache.org.json
-
-## Golang based version
-
-For performance sensitive applications [there's a
-"port"](https://github.com/abh/geodns) of this application written in
-[Go](http://golang.org) that can do many more queries per second.
-
 
 ## Installation
 
