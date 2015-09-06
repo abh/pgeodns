@@ -2,7 +2,6 @@
 use strict;
 use warnings;
 use lib 'lib';
-use v5.10.0;
 use GeoDNS;
 use JSON qw(encode_json);
 use Getopt::Long qw(GetOptions);
@@ -22,8 +21,14 @@ while (my ($domain, $config) = each %{$g->{config}->{bases}}) {
     next if $config->{internal};
     delete $config->{base};
     delete $config->{data}->{""}->{soa};
+    if (defined $config->{max_hosts}) {
+        $config->{max_hosts} += 0;
+    }
     for my $zone (keys %{$config->{data}}) {
         my $data = $config->{data}->{$zone};
+        if (defined $data->{max_hosts}) {
+	    $data->{max_hosts} += 0;
+	}
         for my $t (qw(a aaaa)) {
             next unless $data->{$t};
             for my $r (@{$data->{$t}}) {
@@ -46,7 +51,8 @@ while (my ($domain, $config) = each %{$g->{config}->{bases}}) {
     $domain =~ s/\.$//;
     my $file = $opt_out . "/$domain.json";
 
-    next unless $config->{mtime} > ((stat($file))[9] || 0);
+    my $old = ((stat($file))[9] || 0);
+    next unless $config->{mtime} > $old;
 
     my $file_tmp = $file . ".$$.tmp";
     open my $fh, ">", $file_tmp or die "Could not open $file_tmp: $!";
